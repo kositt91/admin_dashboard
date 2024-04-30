@@ -393,6 +393,7 @@ class _Item1State extends State<Item1> {
             children: [
               Text('1-$_upperLimit件目を表示'),
               SizedBox(width: 16),
+              Text('data'),
               DropdownButton<int>(
                 value: _rowsPerPage,
                 onChanged: (value) {
@@ -414,6 +415,7 @@ class _Item1State extends State<Item1> {
               columns: [
                 DataColumn(label: Text('クライアント')),
                 DataColumn(label: Text('ストア名')),
+                DataColumn(label: Text('区分')),
                 DataColumn(label: Text('注文者')),
                 DataColumn(label: Text('注文日時')),
                 DataColumn(label: Text('希望納品日')),
@@ -429,6 +431,7 @@ class _Item1State extends State<Item1> {
                       return DataRow(cells: [
                         DataCell(Text(data['customer']['clientName'] ?? '')),
                         DataCell(Text(data['customer']['clientBranch'] ?? '')),
+                        DataCell(Text('')),
                         DataCell(Text(data['user']['name'] ?? '')),
                         DataCell(Text(DateFormat('yyyy-MM-dd')
                             .format(DateTime.parse(data['created_at'] ?? '')))),

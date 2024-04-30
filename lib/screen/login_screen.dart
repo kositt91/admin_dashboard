@@ -4,6 +4,7 @@ import 'package:raymay/api/api_service.dart';
 import 'package:raymay/api/token_manager.dart';
 import 'package:raymay/network/auth_provider.dart';
 import 'package:raymay/screen/dashboard_screen.dart';
+import 'package:raymay/screen/forgot.dart';
 import 'package:raymay/widget/appbar.dart';
 
 class Login extends StatefulWidget {
@@ -189,7 +190,13 @@ class _LoginState extends State<Login> {
                 padding: const EdgeInsets.only(top: 34),
                 child: InkWell(
                   onTap: () {
-                    // Navigate to the Lost Password screen
+                    // Navigate to the Forgot Password screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ForgotPasswordScreen(),
+                      ),
+                    );
                   },
                   child: const Text(
                     'パスワードを忘れた場合',
