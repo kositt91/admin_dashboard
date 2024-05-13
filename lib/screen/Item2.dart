@@ -4,6 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:raymay/api/token_manager.dart';
+import 'package:raymay/screen/filter_widget2.dart';
+import 'package:raymay/screen/filter_widget.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart'; // Import open_file package
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:open_file/open_file.dart';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'dart:html' as html;
+import 'package:universal_html/html.dart' as uh;
 
 class Item2 extends StatefulWidget {
   final List<Map<String, dynamic>> sampleData;
@@ -15,6 +40,10 @@ class Item2 extends StatefulWidget {
 }
 
 class _Item2State extends State<Item2> {
+  String clientNameFilter = '';
+  String startDateFilter = '';
+  String endDateFilter = '';
+  late TextEditingController _searchController;
   int _rowsPerPage = 10; // Number of rows per page
   int _currentPage = 1; // Current page number
   int _upperLimit = 10; // Default value for the upper limit
@@ -25,8 +54,16 @@ class _Item2State extends State<Item2> {
   @override
   void initState() {
     super.initState();
+    _searchController = TextEditingController();
     fetchData();
     _filteredData = widget.sampleData;
+  }
+
+  @override
+  void dispose() {
+    _searchController
+        .dispose(); // Dispose the controller when it's no longer needed
+    super.dispose();
   }
 
   String calculateTotalPrice(Map<String, dynamic> data) {
@@ -40,7 +77,7 @@ class _Item2State extends State<Item2> {
     }
 
     // Format the total price with commas
-    NumberFormat formatter = NumberFormat("#,##0.00", "en_US");
+    NumberFormat formatter = NumberFormat("#,##0", "en_US");
     return formatter.format(totalPrice);
   }
 
@@ -89,6 +126,62 @@ class _Item2State extends State<Item2> {
     });
   }
 
+  Future<void> _generateAndDownloadPDF(
+      BuildContext context, Map<String, dynamic> draftDetail) async {
+    try {
+      // Create a PDF document
+      final pdf = pw.Document();
+
+      // Add content to the PDF document
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.Container(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text('order: ${draftDetail['user']['name']}'),
+                  pw.Text('client: ${draftDetail['customer']['clientName']}'),
+                  pw.Text(
+                      'delivery: ${draftDetail['customer']['deliveryMethod']}'),
+                  pw.Text(
+                      'shipping date: ${draftDetail['customer']['shippingDate']}'),
+                  pw.Text(
+                      'client phone: ${draftDetail['customer']['clientPhone']}'),
+                  pw.Text('Date: ${draftDetail['created_at']}'),
+                  // Add more data fields as needed
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
+      // Save the PDF document to a Uint8List
+      final Uint8List pdfBytes = await pdf.save();
+
+      // Convert Uint8List to Blob
+      final pdfBlob = html.Blob([pdfBytes]);
+
+      // Convert Blob to Object URL
+      final pdfUrl = uh.Url.createObjectUrlFromBlob(pdfBlob);
+
+      // Create an anchor element
+      final anchorElement = html.AnchorElement(href: pdfUrl)
+        ..setAttribute("download", "draft_detail.pdf")
+        ..text = "Download PDF";
+
+      // Trigger a click event to start the download
+      anchorElement.click();
+
+      // Revoke the Object URL to release memory
+      uh.Url.revokeObjectUrl(pdfUrl);
+    } catch (e) {
+      print('Error downloading PDF: $e');
+      // Handle error if any
+    }
+  }
+
   void showDetailDialog(Map<String, dynamic> draftDetail) {
     showDialog(
       context: context,
@@ -127,8 +220,9 @@ class _Item2State extends State<Item2> {
                           borderRadius: BorderRadius.circular(40.0),
                         ),
                         child: ElevatedButton.icon(
-                          onPressed: () {
-                            // Handle download PDF action
+                          onPressed: () async {
+                            // Generate PDF and download
+                            await _generateAndDownloadPDF(context, draftDetail);
                           },
                           icon: Icon(Icons.download),
                           label: Text(
@@ -331,17 +425,18 @@ class _Item2State extends State<Item2> {
     print('Rows Per Page: $_rowsPerPage');
     if (_searchText.isNotEmpty) {
       _filteredData = sampleData.where((data) {
-        return data['customer']['clientName']
+        // Apply filters
+        bool matchesClientName = data['customer'] != null &&
+            data['customer']['clientName'] != null &&
+            data['customer']['clientName']
                 .toLowerCase()
-                .contains(_searchText) || // Use _searchText directly
+                .contains(clientNameFilter.toLowerCase());
+        bool matchesStartDate = startDateFilter.isEmpty ||
             (data['created_at'] != null &&
-                data['created_at'].toLowerCase().contains(_searchText)) ||
-            (data['customer']['shippingDate'] != null &&
-                data['customer']['shippingDate']
-                    .toLowerCase()
-                    .contains(_searchText)) ||
-            (data['user']['name'] != null &&
-                data['user']['name'].toLowerCase().contains(_searchText));
+                data['created_at'] >= startDateFilter);
+        bool matchesEndDate = endDateFilter.isEmpty ||
+            (data['created_at'] != null && data['created_at'] <= endDateFilter);
+        return matchesClientName && matchesStartDate && matchesEndDate;
       }).toList();
     } else {
       _filteredData = sampleData;
@@ -369,6 +464,7 @@ class _Item2State extends State<Item2> {
         Container(
           padding: const EdgeInsets.only(top: 10.0, right: 16, left: 16),
           child: TextField(
+            controller: _searchController,
             onChanged: (value) {
               setState(() {
                 _searchText =
@@ -378,11 +474,231 @@ class _Item2State extends State<Item2> {
             decoration: InputDecoration(
               hintText: '名前などを入力',
               prefixIcon: Icon(Icons.person_search),
+              suffixIcon: IconButton(
+                icon: Icon(Icons.filter_list),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return Stack(
+                        children: [
+                          Positioned(
+                              right: 0,
+                              top: 200,
+                              child: Dialog(
+                                insetPadding:
+                                    EdgeInsets.symmetric(horizontal: 16.0),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(50.0),
+                                ),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                    color: Colors.white,
+                                  ),
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.4,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Padding(
+                                        padding: const EdgeInsets.all(0.0),
+                                        child: Text(
+                                          '',
+                                          style: TextStyle(
+                                            fontSize: 24.0,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 16.0),
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'クライアント',
+                                                  style: TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration:
+                                                        InputDecoration(),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '発注者           ',
+                                                  style: TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration:
+                                                        InputDecoration(),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '注文日時       ',
+                                                  style: TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration: InputDecoration(
+                                                      hintText: 'Start Date',
+                                                      suffixIcon: Icon(Icons
+                                                          .calendar_today), // Move calendar icon to the end
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '   〜   ',
+                                                  style: TextStyle(
+                                                    fontSize: 23.0,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration: InputDecoration(
+                                                      hintText: 'End Date',
+                                                      suffixIcon: Icon(Icons
+                                                          .calendar_today), // Move calendar icon to the end
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '希望納品日   ',
+                                                  style: TextStyle(
+                                                    fontSize: 16.0,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration: InputDecoration(
+                                                      hintText: 'Start Date',
+                                                      suffixIcon: Icon(Icons
+                                                          .calendar_today), // Move calendar icon to the end
+                                                    ),
+                                                  ),
+                                                ),
+                                                Text(
+                                                  '   〜   ',
+                                                  style: TextStyle(
+                                                    fontSize: 23.0,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                SizedBox(width: 8.0),
+                                                Expanded(
+                                                  child: TextField(
+                                                    decoration: InputDecoration(
+                                                      hintText: 'End Date',
+                                                      suffixIcon: Icon(Icons
+                                                          .calendar_today), // Move calendar icon to the end
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: 16.0),
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                            right: 16, bottom: 16),
+                                        child: Align(
+                                          alignment: Alignment.bottomRight,
+                                          child: Container(
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              gradient: LinearGradient(
+                                                colors: [
+                                                  Color(0xFF202284),
+                                                  Color(0xFFAB7CAE),
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                stops: [0.0, 1.0],
+                                                tileMode: TileMode.clamp,
+                                              ),
+                                            ),
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                // Handle view detail button press
+                                              },
+                                              style: ButtonStyle(
+                                                backgroundColor:
+                                                    MaterialStateProperty.all(
+                                                        Colors.transparent),
+                                                shape:
+                                                    MaterialStateProperty.all<
+                                                        RoundedRectangleBorder>(
+                                                  RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            8),
+                                                  ),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '検索する',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ))
+                        ],
+                      ); // Show the FilterWidget dialog
+                    },
+                  );
+                  // Implement your filter logic here
+                },
+              ),
             ),
           ),
         ),
         Container(
-          padding: const EdgeInsets.only(top: 10.0, right: 16, left: 16),
+          padding: const EdgeInsets.only(top: 20.0, right: 16, left: 16),
           alignment: Alignment.centerRight,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -391,22 +707,42 @@ class _Item2State extends State<Item2> {
               SizedBox(
                   width:
                       16), // Add some space between the text and dropdown button
-              DropdownButton<int>(
-                value: _rowsPerPage,
-                onChanged: (value) {
-                  setState(() {
-                    _rowsPerPage = value!;
-                    // Update rows per page logic
-                    // Update the upper limit based on the selected value
-                    _upperLimit = value;
-                  });
-                },
-                items: [10, 15, 20].map<DropdownMenuItem<int>>((value) {
-                  return DropdownMenuItem<int>(
-                    value: value,
-                    child: Text('$value'),
-                  );
-                }).toList(),
+              Row(
+                children: [
+                  Text('1ページあたりの表示件数'),
+                  SizedBox(width: 8), // Adjust the width as needed
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                          color: Colors.grey), // Add border decoration
+                      borderRadius: BorderRadius.circular(
+                          4.0), // Add border radius if needed
+                    ),
+                    child: SizedBox(
+                      width: 80,
+                      height: 30, // Adjust the width and height as needed
+                      child: Center(
+                        child: DropdownButton<int>(
+                          value: _rowsPerPage,
+                          onChanged: (value) {
+                            changeRowsPerPage(value!);
+                          },
+                          underline: SizedBox(), // Remove the underline
+                          icon: Icon(Icons.arrow_drop_down), // Set custom icon
+                          focusColor: Colors.transparent, // Remove active color
+
+                          items:
+                              [10, 15, 20].map<DropdownMenuItem<int>>((value) {
+                            return DropdownMenuItem<int>(
+                              value: value,
+                              child: Text('$value'),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -479,13 +815,18 @@ class _Item2State extends State<Item2> {
                             DataCell(Text(data['user'] != null
                                 ? data['user']['name'] ?? ''
                                 : '')),
-                            DataCell(Text(DateFormat('yyyy-MM-dd').format(
+                            DataCell(Text(DateFormat('yyyy/MM/dd').format(
                                 DateTime.parse(data['created_at'] ?? '')))),
-                            DataCell(Text(data['customer'] != null
-                                ? data['customer']['shippingDate'] ?? ''
-                                : '')),
+                            DataCell(Text(
+                              data['customer']['shippingDate'] != null
+                                  ? DateFormat('yyyy/MM/dd').format(
+                                      DateTime.parse(
+                                          data['customer']['shippingDate']))
+                                  : '', // Format the shipping date if it exists, otherwise use an empty string
+                            )),
                             DataCell(
                               Container(
+                                width: 104,
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(40),
                                   gradient: LinearGradient(

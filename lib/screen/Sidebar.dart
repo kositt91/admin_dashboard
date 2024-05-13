@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:raymay/api/token_manager.dart';
+import 'package:raymay/screen/item3.dart';
 import 'package:raymay/screen/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -95,6 +96,14 @@ class _SidebarState extends State<Sidebar> {
                   child: TextButton(
                     onPressed: () {
                       widget.onItemSelected(index);
+                      if (index == 2) {
+                        // Check if Item 3 (profile) is tapped
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ProfilePage()),
+                        );
+                      }
                     },
                     style: ButtonStyle(
                       backgroundColor: MaterialStateProperty.resolveWith<Color>(
@@ -184,16 +193,26 @@ class _SidebarState extends State<Sidebar> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundImage: _backgroundImageUrl.isNotEmpty
-                          ? NetworkImage(_backgroundImageUrl)
-                          : null,
-                      child: _backgroundImageUrl.isEmpty
-                          ? Icon(Icons.person,
-                              size: 48,
-                              color: Colors.grey) // Placeholder if no image
-                          : null,
+                    GestureDetector(
+                      onTap: () {
+                        // Navigate to the profile page
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ProfilePage()),
+                        );
+                      },
+                      child: CircleAvatar(
+                        radius: 24,
+                        backgroundImage: _backgroundImageUrl.isNotEmpty
+                            ? NetworkImage(_backgroundImageUrl)
+                            : null,
+                        child: _backgroundImageUrl.isEmpty
+                            ? Icon(Icons.person,
+                                size: 48,
+                                color: Colors.grey) // Placeholder if no image
+                            : null,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Text(

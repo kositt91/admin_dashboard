@@ -27,7 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CustomAppBar(
-        title: 'Dashboard',
+        title: '',
         onNotificationPressed: () {
           // Handle notification icon pressed
         },
@@ -53,7 +53,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Expanded(
             flex: 4,
             child: _currentPage == 1
-                ? Item1(sampleData: sampleData)
+                ? Item1(
+                    sampleData: sampleData,
+                    onFilterApplied:
+                        (List<Map<String, dynamic>> filteredData) {},
+                  )
                 : Item2(sampleData: sampleData),
           ),
         ],
