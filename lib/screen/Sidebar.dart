@@ -78,113 +78,114 @@ class _SidebarState extends State<Sidebar> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.only(left: 24, right: 24),
-            child: ListView.builder(
-              itemCount: widget.items.length,
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemBuilder: (context, index) {
-                final item = widget.items[index];
-                final title = item['title'] as String;
-                final icon = item['icon'] as IconData;
+              padding: const EdgeInsets.only(left: 24, right: 24),
+              child: ListView.builder(
+                itemCount: widget.items.length,
+                shrinkWrap: true,
+                physics: NeverScrollableScrollPhysics(),
+                itemBuilder: (context, index) {
+                  final item = widget.items[index];
+                  final title = item['title'] as String;
+                  final icon = item['icon'] as IconData;
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      widget.onItemSelected(index);
-                      if (index == 2) {
-                        // Check if Item 3 (profile) is tapped
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ProfilePage()),
-                        );
-                      }
-                    },
-                    style: ButtonStyle(
-                      backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                        (Set<MaterialState> states) {
-                          if (index == widget.selectedIndex) {
-                            if (states.contains(MaterialState.selected)) {
-                              return Colors.blue; // Selected background color
-                            } else {
-                              return const Color.fromARGB(
-                                  255, 255, 255, 255); // Hover background color
-                            }
-                          } else {
-                            return Colors
-                                .transparent; // Default background color
-                          }
-                        },
-                      ),
-                      shape: MaterialStateProperty.all<OutlinedBorder>(
-                        RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(8), // Border radius
-                        ),
-                      ),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                    child: Row(
-                      children: [
-                        ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF202284),
-                                Color(0xFFAB7CAE),
-                              ],
-                            ).createShader(bounds);
+                    child: TextButton(
+                      onPressed: () {
+                        widget.onItemSelected(index);
+                        if (index == 2) {
+                          // Check if Item 3 (profile) is tapped
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => ProfilePage()),
+                          );
+                        }
+                      },
+                      style: ButtonStyle(
+                        backgroundColor:
+                            MaterialStateProperty.resolveWith<Color>(
+                          (Set<MaterialState> states) {
+                            if (index == widget.selectedIndex) {
+                              if (states.contains(MaterialState.selected)) {
+                                return Colors.blue; // Selected background color
+                              } else {
+                                return const Color.fromARGB(255, 255, 255,
+                                    255); // Hover background color
+                              }
+                            } else {
+                              return Colors
+                                  .transparent; // Default background color
+                            }
                           },
-                          child: Icon(
-                            icon,
-                            size: 24, // Icon size
-                            color: index == widget.selectedIndex
-                                ? Colors.white
-                                : Colors.grey,
+                        ),
+                        shape: MaterialStateProperty.all<OutlinedBorder>(
+                          RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(8), // Border radius
                           ),
                         ),
-                        const SizedBox(
-                            width: 15.11), // Space between icon and text
-                        ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return const LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Color(0xFF202284),
-                                Color(0xFFAB7CAE),
-                              ],
-                            ).createShader(bounds);
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 20), // Vertical padding
-                            child: Text(
-                              title,
-                              style: TextStyle(
-                                fontSize: 12, // Text size
-                                fontWeight: FontWeight.w700, // Text weight
-                                color: index == widget.selectedIndex
-                                    ? Colors.white
-                                    : Color.fromARGB(230, 255, 255,
-                                        255), // Text color based on selection
+                      ),
+                      child: Row(
+                        children: [
+                          ShaderMask(
+                            shaderCallback: (Rect bounds) {
+                              return const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF202284),
+                                  Color(0xFFAB7CAE),
+                                ],
+                              ).createShader(bounds);
+                            },
+                            child: Icon(
+                              icon,
+                              size: 24, // Icon size
+                              color: index == widget.selectedIndex
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(
+                                      0.5), // Icon color based on selection
+                            ),
+                          ),
+                          const SizedBox(
+                              width: 15.11), // Space between icon and text
+                          ShaderMask(
+                            shaderCallback: (Rect bounds) {
+                              return const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color(0xFF202284),
+                                  Color(0xFFAB7CAE),
+                                ],
+                              ).createShader(bounds);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 20), // Vertical padding
+                              child: Text(
+                                title,
+                                style: TextStyle(
+                                  fontSize: 12, // Text size
+                                  fontWeight: FontWeight.w700, // Text weight
+                                  color: index == widget.selectedIndex
+                                      ? Colors.white
+                                      : Colors.white.withOpacity(
+                                          0.5), // Text color based on selection
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
+                  );
+                },
+              )),
           const Spacer(), // Add spacer to push user info to the bottom
           Padding(
             padding: const EdgeInsets.only(left: 44, right: 44, bottom: 16),

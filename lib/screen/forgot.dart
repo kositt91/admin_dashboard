@@ -119,7 +119,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ElevatedButton(
                 onPressed: isEmailComplete ? sendPasswordResetLink : null,
                 style: ElevatedButton.styleFrom(
-                  primary: Color.fromARGB(255, 40, 41, 131),
+                  backgroundColor: Color.fromARGB(255, 40, 41, 131),
                   padding: EdgeInsets.symmetric(vertical: 20),
                   minimumSize: Size(360, 0),
                 ),

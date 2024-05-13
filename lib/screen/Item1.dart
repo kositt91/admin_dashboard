@@ -1483,7 +1483,7 @@ class _Item1State extends State<Item1> {
                             style: TextStyle(fontSize: 12.0),
                           ),
                           style: ElevatedButton.styleFrom(
-                            primary: Colors
+                            backgroundColor: Colors
                                 .transparent, // Set background color to transparent
                             shadowColor: Colors.transparent, // Remove shadow
                             elevation: 0, // Remove elevation

@@ -29,6 +29,40 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'dart:html' as html;
 import 'package:universal_html/html.dart' as uh;
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
+import 'package:raymay/api/token_manager.dart';
+import 'package:intl/intl.dart';
+import 'package:raymay/screen/filter_widget.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart'; // Import open_file package
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:open_file/open_file.dart';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'dart:html' as html;
+import 'package:universal_html/html.dart' as uh;
 
 class Item2 extends StatefulWidget {
   final List<Map<String, dynamic>> sampleData;
@@ -50,12 +84,14 @@ class _Item2State extends State<Item2> {
   String _searchText = '';
   late List<Map<String, dynamic>> _filteredData;
   List<Map<String, dynamic>> sampleData = [];
+  pw.Font? _notoSanFont;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
     fetchData();
+    loadFont();
     _filteredData = widget.sampleData;
   }
 
@@ -126,6 +162,14 @@ class _Item2State extends State<Item2> {
     });
   }
 
+  Future<void> loadFont() async {
+    ByteData fontData = await rootBundle.load("/fonts/notosan.ttf");
+    setState(() {
+      _notoSanFont = pw.Font.ttf(fontData);
+    });
+  }
+
+  // Create a PDF document
   Future<void> _generateAndDownloadPDF(
       BuildContext context, Map<String, dynamic> draftDetail) async {
     try {
@@ -137,19 +181,705 @@ class _Item2State extends State<Item2> {
         pw.Page(
           build: (pw.Context context) {
             return pw.Container(
+              // Adjust the width as needed
               child: pw.Column(
+                mainAxisSize: pw.MainAxisSize.min,
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('order: ${draftDetail['user']['name']}'),
-                  pw.Text('client: ${draftDetail['customer']['clientName']}'),
-                  pw.Text(
-                      'delivery: ${draftDetail['customer']['deliveryMethod']}'),
-                  pw.Text(
-                      'shipping date: ${draftDetail['customer']['shippingDate']}'),
-                  pw.Text(
-                      'client phone: ${draftDetail['customer']['clientPhone']}'),
-                  pw.Text('Date: ${draftDetail['created_at']}'),
-                  // Add more data fields as needed
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Padding(
+                        padding: const pw.EdgeInsets.all(0.0),
+                        child: pw.Text(
+                          '注文内容詳細',
+                          style: pw.TextStyle(
+                            fontSize: 16.0,
+                            fontWeight: pw.FontWeight.bold,
+                            fontFallback: [
+                              _notoSanFont ??
+                                  pw.Font
+                                      .helvetica(), // Use Helvetica as a fallback font
+                            ], // Use the loaded font here
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 10.0),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Row(
+                          children: [
+                            pw.Text(
+                              '発注者    ',
+                              style: pw.TextStyle(
+                                fontSize: 12.0,
+                                fontFallback: [
+                                  _notoSanFont ??
+                                      pw.Font
+                                          .helvetica(), // Use Helvetica as a fallback font
+                                ],
+                              ),
+                            ),
+                            pw.Text(
+                              '${draftDetail['user']['name']}',
+                              style: pw.TextStyle(
+                                fontSize: 12.0,
+
+                                fontFallback: [
+                                  _notoSanFont ??
+                                      pw.Font
+                                          .helvetica(), // Use Helvetica as a fallback font
+                                ],
+                                decoration: pw.TextDecoration.underline,
+
+                                decorationThickness:
+                                    2.0, // Change to your desired thickness
+                                decorationStyle:
+                                    pw.TextDecorationStyle.solid, // E
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.SizedBox(
+                          height: 10,
+                        ),
+                        pw.Row(
+                          children: [
+                            pw.Text(
+                              'クライアント    ',
+                              style: pw.TextStyle(
+                                fontSize: 12.0,
+                                fontWeight: pw.FontWeight.bold,
+                                fontFallback: [
+                                  _notoSanFont ??
+                                      pw.Font
+                                          .helvetica(), // Use Helvetica as a fallback font
+                                ],
+                              ),
+                            ),
+                            pw.Text(
+                              '${draftDetail['customer']['clientName']}',
+                              style: pw.TextStyle(
+                                fontSize: 12.0,
+                                fontWeight: pw.FontWeight.bold,
+
+                                decoration: pw.TextDecoration.underline,
+                                // Change to your desired color
+
+                                decorationThickness:
+                                    2.0, // Change to your desired thickness
+                                decorationStyle: pw.TextDecorationStyle
+                                    .solid, // Ensure the decoration is solid
+                              ),
+                            ),
+                          ],
+                        ),
+                        pw.SizedBox(
+                          height: 10,
+                        ),
+                        pw.RichText(
+                          text: pw.TextSpan(
+                            children: [
+                              pw.TextSpan(
+                                text: '下書き合計金額  ',
+                                style: pw.TextStyle(
+                                  fontSize: 12.0,
+                                  fontWeight: pw.FontWeight.bold,
+                                  fontFallback: [
+                                    _notoSanFont ??
+                                        pw.Font
+                                            .helvetica(), // Use Helvetica as a fallback font
+                                  ],
+                                ),
+                              ),
+                              pw.TextSpan(
+                                text:
+                                    '  ¥  ${calculateTotalPrice(draftDetail)}',
+                                style: pw.TextStyle(
+                                  fontSize: 12.0, // Increase the font size
+                                  fontWeight: pw.FontWeight
+                                      .bold, // Apply bold font weight
+                                  // Add any other styles you want
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(
+                    height: 20,
+                  ),
+                  pw.Container(
+                    width: 900,
+                    child: pw.Table(
+                      border: pw.TableBorder.all(
+                        color: PdfColor.fromHex(
+                            '#CCCCCC'), // Set border color to black
+                        width: 1, // Set border width
+                        style: pw.BorderStyle.solid, // Set border style
+                      ), // Add borders to the table
+                      children: [
+                        pw.TableRow(
+                          children: [
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('得意先発注No',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ?? pw.Font.helvetica(),
+                                            // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('得意先コード',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('配達先',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('出荷指定日',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('電話番号',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('注文日時',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Add more TableRow as needed
+
+                        pw.TableRow(
+                          children: [
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text(
+                                        '${draftDetail['customer']['orderNumber']}',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text(
+                                        '${draftDetail['customer']['originalClientId']}',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text(
+                                        '${draftDetail['customer']['deliveryMethod']}',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text(
+                                      '${draftDetail['customer']['shippingDate']}' !=
+                                              null
+                                          ? DateFormat('yyyy/MM/dd').format(
+                                              DateTime.parse(
+                                                  draftDetail['customer']
+                                                      ['shippingDate']))
+                                          : '',
+                                      style: pw.TextStyle(
+                                        fontFallback: [
+                                          _notoSanFont ??
+                                              pw.Font
+                                                  .helvetica(), // Use Helvetica as a fallback font
+                                        ],
+                                      ) // Format the shipping date if it exists, otherwise use an empty string
+                                      ),
+                                ),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text(
+                                        '${draftDetail['customer']['clientPhone']}',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text(
+                                      DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(
+                                              draftDetail['created_at'] ?? '')),
+                                      style: pw.TextStyle(
+                                        fontFallback: [
+                                          _notoSanFont ??
+                                              pw.Font
+                                                  .helvetica(), // Use Helvetica as a fallback font
+                                        ],
+                                      )),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Add more TableRow as needed
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(
+                    height: 20,
+                  ),
+                  pw.Container(
+                    width: 400,
+                    child: pw.Table(
+                      border: pw.TableBorder.all(
+                        color: PdfColor.fromHex(
+                            '#CCCCCC'), // Set border color to black
+                        width: 1, // Set border width
+                        style: pw.BorderStyle.solid,
+                      ),
+                      children: [
+                        pw.TableRow(
+                          children: [
+                            pw.Container(
+                              // Background color for the cell
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text('お届け先',
+                                      style: pw.TextStyle(
+                                        fontFallback: [
+                                          _notoSanFont ??
+                                              pw.Font
+                                                  .helvetica(), // Use Helvetica as a fallback font
+                                        ],
+                                      )),
+                                ),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text(''),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Add more TableRow as needed
+
+                        pw.TableRow(
+                          children: [
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text(
+                                    '〒  ${draftDetail['customer']['clientPhone']}',
+                                    style: pw.TextStyle(
+                                      fontFallback: [
+                                        _notoSanFont ?? pw.Font.helvetica(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                  child: pw.Text(
+                                    '${draftDetail['customer']['clientAddress']}',
+                                    style: pw.TextStyle(
+                                      fontFallback: [
+                                        _notoSanFont ?? pw.Font.helvetica(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Add more TableRow as needed
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    width: 300,
+                    child: pw.Padding(
+                      padding: pw.EdgeInsets.only(top: 10),
+                      child: pw.Container(
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(
+                            bottom: pw.BorderSide(
+                              color: PdfColor.fromHex(
+                                  '#CCCCCC'), // Set border color to black
+                              width: 1, // Set border width
+                              style: pw.BorderStyle.solid,
+                            ),
+                          ),
+                        ),
+                        child: pw.Text(
+                          '備考   ${draftDetail['customer']['remark']}',
+                          style: pw.TextStyle(
+                            fontFallback: [
+                              _notoSanFont ?? pw.Font.helvetica(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.Container(
+                    width: 300,
+                    child: pw.Padding(
+                      padding: pw.EdgeInsets.only(top: 10),
+                      child: pw.Container(
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border(
+                              bottom: pw.BorderSide(
+                            color: PdfColor.fromHex(
+                                '#CCCCCC'), // Set border color to black
+                            width: 1, // Set border width
+                            style: pw.BorderStyle.solid,
+                          )),
+                        ),
+                        child: pw.Text(
+                          'コメント   ${draftDetail['customer']['comment']}',
+                          style: pw.TextStyle(
+                            fontFallback: [
+                              _notoSanFont ?? pw.Font.helvetica(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  pw.SizedBox(
+                    height: 10,
+                  ),
+                  pw.Container(
+                    width: 1000,
+
+                    // Set the background color here
+                    child: pw.Table(
+                      border: pw.TableBorder.all(
+                        color: PdfColor.fromHex(
+                            '#CCCCCC'), // Set border color to black
+                        width: 1, // Set border width
+                        style: pw.BorderStyle.solid,
+                      ), // Add borders to the tabler
+                      children: [
+                        // Table header
+                        pw.TableRow(
+                          children: [
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('JANコード',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('型番',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('品名',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('数量',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('価格',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              color: PdfColor.fromHex('#CCCCCC'),
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('金額',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                          ],
+                        ),
+// Table rows
+                        for (var product in draftDetail['products'])
+                          pw.TableRow(
+                            decoration: pw.BoxDecoration(
+                                // Add borders to the row
+                                ),
+                            children: [
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(product['productJan'] ?? ''),
+                                ),
+                              ),
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(product['productCode'] ?? ''),
+                                ),
+                              ),
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(product['productName'] ?? ''),
+                                ),
+                              ),
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(
+                                      product['quantity']?.toString() ?? ''),
+                                ),
+                              ),
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(
+                                      product['productUnitPrice']?.toString() ??
+                                          ''),
+                                ),
+                              ),
+                              pw.Container(
+                                alignment: pw.Alignment.center,
+                                child: pw.Padding(
+                                  padding: const pw.EdgeInsets.all(8.0),
+                                  child: pw.Text(
+                                    ((product['quantity'] ?? 0) *
+                                            (product['productUnitPrice'] ?? 0))
+                                        .toString(),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+                  pw.SizedBox(height: 16.0),
                 ],
               ),
             );
@@ -230,7 +960,7 @@ class _Item2State extends State<Item2> {
                             style: TextStyle(fontSize: 12.0),
                           ),
                           style: ElevatedButton.styleFrom(
-                            primary: Colors
+                            backgroundColor: Colors
                                 .transparent, // Set background color to transparent
                             shadowColor: Colors.transparent, // Remove shadow
                             elevation: 0, // Remove elevation
