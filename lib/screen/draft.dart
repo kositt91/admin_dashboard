@@ -1,34 +1,4 @@
-import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
-import 'package:raymay/api/token_manager.dart';
-import 'package:raymay/screen/filter_widget2.dart';
-import 'package:raymay/screen/filter_widget.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'dart:io';
-import 'dart:typed_data';
-import 'dart:io';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart'; // Import open_file package
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:open_file/open_file.dart';
-import 'dart:typed_data';
-import 'package:flutter/material.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'dart:html' as html;
-import 'package:universal_html/html.dart' as uh;
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
@@ -64,95 +34,50 @@ import 'package:pdf/widgets.dart' as pw;
 import 'dart:html' as html;
 import 'package:universal_html/html.dart' as uh;
 
-class Item2 extends StatefulWidget {
-  final List<Map<String, dynamic>> sampleData;
-
-  Item2({required this.sampleData});
-
+class DraftPage extends StatefulWidget {
   @override
-  _Item2State createState() => _Item2State();
+  _DraftPageState createState() => _DraftPageState();
 }
 
-class _Item2State extends State<Item2> {
-  String clientNameFilter = '';
-  String startDateFilter = '';
-  String endDateFilter = '';
-  late TextEditingController _searchController;
-  int _rowsPerPage = 10; // Number of rows per page
-  int _currentPage = 1; // Current page number
-  int _upperLimit = 10; // Default value for the upper limit
-  String _searchText = '';
-  late List<Map<String, dynamic>> _filteredData;
-  List<Map<String, dynamic>> sampleData = [];
+class _DraftPageState extends State<DraftPage> {
+  late List<dynamic> orders;
+  int _upperLimit = 10;
+  int _rowsPerPage = 10;
+  int _currentPage = 1;
+  int totalPages = 0; // Initialize totalPages with a default value
+  late int totalItems;
+  late int itemsPerPage;
+  late List<dynamic> filteredOrders;
   pw.Font? _notoSanFont;
 
   @override
   void initState() {
     super.initState();
-    _searchController = TextEditingController();
     fetchData();
     loadFont();
-    _filteredData = widget.sampleData;
-  }
-
-  @override
-  void dispose() {
-    _searchController
-        .dispose(); // Dispose the controller when it's no longer needed
-    super.dispose();
-  }
-
-  String calculateTotalPrice(Map<String, dynamic> data) {
-    double totalPrice = 0;
-    List<dynamic> products = data['products'];
-
-    for (var product in products) {
-      int quantity = product['quantity'] ?? 0;
-      double unitPrice = product['productUnitPrice'] ?? 0.0;
-      totalPrice += quantity * unitPrice;
-    }
-
-    // Format the total price with commas
-    NumberFormat formatter = NumberFormat("#,##0", "en_US");
-    return formatter.format(totalPrice);
   }
 
   Future<void> fetchData() async {
     final authToken = await TokenManager.getAccessToken();
-    final Uri uri = Uri.parse(
-        'https://qos.reimei-fujii.developers.engineerforce.io/api/v1/user/admin-drafts/');
-    final Map<String, String> headers = {
-      'Authorization': 'Bearer $authToken',
-    };
+    final response = await http.get(
+      Uri.parse(
+          'https://rfqos.internal.engineerforce.io/api/v1/user/admin-drafts/'),
+      headers: {'Authorization': 'Bearer $authToken'},
+    );
 
-    try {
-      final response = await http.get(uri, headers: headers);
-
-      if (response.statusCode == 200) {
-        List<dynamic> data = jsonDecode(response.body);
-        if (data.isNotEmpty && data[0] is List) {
-          // Check if data is not empty and is a list
-          setState(() {
-            sampleData =
-                data[0].cast<Map<String, dynamic>>(); // Access the inner list
-          });
-        } else {
-          throw Exception('Data is not in the expected format');
-        }
-      } else {
-        print('Failed to load data. Status code: ${response.statusCode}');
-        throw Exception('Failed to load data');
-      }
-    } catch (e) {
-      print('Error fetching data: $e');
-      throw Exception('Error fetching data');
+    if (response.statusCode == 200) {
+      final List<dynamic> data = json.decode(utf8.decode(response.bodyBytes));
+      setState(() {
+        orders = data;
+        totalItems = orders.length;
+        itemsPerPage = _rowsPerPage;
+        totalPages = (totalItems / itemsPerPage).ceil();
+        filteredOrders = List.from(orders); // Initialize filteredOrders here
+        print(orders); // Print the fetched data
+      });
+    } else {
+      throw Exception('Failed to load data');
     }
-  }
-
-  void navigateToPage(int page) {
-    setState(() {
-      _currentPage = page;
-    });
   }
 
   void changeRowsPerPage(int value) {
@@ -162,6 +87,21 @@ class _Item2State extends State<Item2> {
     });
   }
 
+  void navigateToPage(int page) {
+    setState(() {
+      _currentPage = page;
+      _upperLimit = _currentPage * _rowsPerPage;
+    });
+  }
+
+  String calculateTotalAmount(Map<String, dynamic> order) {
+    double total = 0;
+    for (var product in order['products']) {
+      total += product['quantity'] * product['productPrice'];
+    }
+    return total.toStringAsFixed(2); // Return total amount as a string
+  }
+
   Future<void> loadFont() async {
     ByteData fontData = await rootBundle.load("/fonts/notosan.ttf");
     setState(() {
@@ -169,9 +109,9 @@ class _Item2State extends State<Item2> {
     });
   }
 
-  // Create a PDF document
+// Create a PDF document
   Future<void> _generateAndDownloadPDF(
-      BuildContext context, Map<String, dynamic> draftDetail) async {
+      BuildContext context, Map<String, dynamic> orderDetail) async {
     try {
       // Create a PDF document
       final pdf = pw.Document();
@@ -225,21 +165,14 @@ class _Item2State extends State<Item2> {
                               ),
                             ),
                             pw.Text(
-                              '${draftDetail['user']['name'] ?? ''}',
+                              '${orderDetail['salePerson']['fullname']}',
                               style: pw.TextStyle(
                                 fontSize: 12.0,
-
                                 fontFallback: [
                                   _notoSanFont ??
                                       pw.Font
                                           .helvetica(), // Use Helvetica as a fallback font
                                 ],
-                                decoration: pw.TextDecoration.underline,
-
-                                decorationThickness:
-                                    2.0, // Change to your desired thickness
-                                decorationStyle:
-                                    pw.TextDecorationStyle.solid, // E
                               ),
                             ),
                           ],
@@ -262,18 +195,15 @@ class _Item2State extends State<Item2> {
                               ),
                             ),
                             pw.Text(
-                              '${draftDetail['customer']['clientName'] ?? ''}',
+                              '${orderDetail['customer']['name']}',
                               style: pw.TextStyle(
                                 fontSize: 12.0,
                                 fontWeight: pw.FontWeight.bold,
-
-                                decoration: pw.TextDecoration.underline,
-                                // Change to your desired color
-
-                                decorationThickness:
-                                    2.0, // Change to your desired thickness
-                                decorationStyle: pw.TextDecorationStyle
-                                    .solid, // Ensure the decoration is solid
+                                fontFallback: [
+                                  _notoSanFont ??
+                                      pw.Font
+                                          .helvetica(), // Use Helvetica as a fallback font
+                                ],
                               ),
                             ),
                           ],
@@ -298,7 +228,7 @@ class _Item2State extends State<Item2> {
                               ),
                               pw.TextSpan(
                                 text:
-                                    '  ¥  ${calculateTotalPrice(draftDetail)}',
+                                    '  ¥  ${calculateTotalAmount(orderDetail)}',
                                 style: pw.TextStyle(
                                   fontSize: 12.0, // Increase the font size
                                   fontWeight: pw.FontWeight
@@ -441,8 +371,23 @@ class _Item2State extends State<Item2> {
                               child: pw.SizedBox(
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
-                                    child: pw.Text(
-                                        '${draftDetail['customer']['orderNumber'] ?? ''}',
+                                    child: pw.Text('${orderDetail['orderId']}',
+                                        style: pw.TextStyle(
+                                          fontFallback: [
+                                            _notoSanFont ??
+                                                pw.Font
+                                                    .helvetica(), // Use Helvetica as a fallback font
+                                          ],
+                                        ))),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
+                                    child: pw.Text('${orderDetail['pk']}',
                                         style: pw.TextStyle(
                                           fontFallback: [
                                             _notoSanFont ??
@@ -459,7 +404,7 @@ class _Item2State extends State<Item2> {
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
                                     child: pw.Text(
-                                        '${draftDetail['customer']['originalClientId'] ?? ''}',
+                                        '${orderDetail['customer']['branch']}',
                                         style: pw.TextStyle(
                                           fontFallback: [
                                             _notoSanFont ??
@@ -475,8 +420,18 @@ class _Item2State extends State<Item2> {
                               child: pw.SizedBox(
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
+                                  child: pw.Text(' '),
+                                ),
+                              ),
+                            ),
+                            pw.Container(
+                              // Background color for the cell
+                              alignment: pw.Alignment.center,
+                              child: pw.SizedBox(
+                                height: 25, // Adjust the height as needed
+                                child: pw.Center(
                                     child: pw.Text(
-                                        '${draftDetail['customer']['deliveryMethod'] ?? ''}',
+                                        '${orderDetail['customer']['phone']}',
                                         style: pw.TextStyle(
                                           fontFallback: [
                                             _notoSanFont ??
@@ -492,58 +447,7 @@ class _Item2State extends State<Item2> {
                               child: pw.SizedBox(
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
-                                    child: pw.Text(
-                                  draftDetail['customer']['shippingDate'] !=
-                                          null
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(draftDetail['customer']
-                                              ['shippingDate']),
-                                        )
-                                      : '',
-                                  style: pw.TextStyle(
-                                    fontFallback: [
-                                      _notoSanFont ??
-                                          pw.Font
-                                              .helvetica(), // Use Helvetica as a fallback font
-                                    ],
-                                  ),
-                                )),
-                              ),
-                            ),
-                            pw.Container(
-                              // Background color for the cell
-                              alignment: pw.Alignment.center,
-                              child: pw.SizedBox(
-                                height: 25, // Adjust the height as needed
-                                child: pw.Center(
-                                    child: pw.Text(
-                                        '${draftDetail['customer']['clientPhone'] ?? ''}',
-                                        style: pw.TextStyle(
-                                          fontFallback: [
-                                            _notoSanFont ??
-                                                pw.Font
-                                                    .helvetica(), // Use Helvetica as a fallback font
-                                          ],
-                                        ))),
-                              ),
-                            ),
-                            pw.Container(
-                              // Background color for the cell
-                              alignment: pw.Alignment.center,
-                              child: pw.SizedBox(
-                                height: 25, // Adjust the height as needed
-                                child: pw.Center(
-                                  child: pw.Text(
-                                      DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(
-                                              draftDetail['created_at'] ?? '')),
-                                      style: pw.TextStyle(
-                                        fontFallback: [
-                                          _notoSanFont ??
-                                              pw.Font
-                                                  .helvetica(), // Use Helvetica as a fallback font
-                                        ],
-                                      )),
+                                  child: pw.Text(''),
                                 ),
                               ),
                             ),
@@ -611,7 +515,7 @@ class _Item2State extends State<Item2> {
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
                                   child: pw.Text(
-                                    '〒  ${draftDetail['customer']['clientPhone'] ?? ''}',
+                                    '〒  ${orderDetail['customer']['phone']}',
                                     style: pw.TextStyle(
                                       fontFallback: [
                                         _notoSanFont ?? pw.Font.helvetica(),
@@ -628,7 +532,7 @@ class _Item2State extends State<Item2> {
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
                                   child: pw.Text(
-                                    '${draftDetail['customer']['clientAddress'] ?? ''}',
+                                    '${orderDetail['customer']['address']}',
                                     style: pw.TextStyle(
                                       fontFallback: [
                                         _notoSanFont ?? pw.Font.helvetica(),
@@ -660,7 +564,7 @@ class _Item2State extends State<Item2> {
                           ),
                         ),
                         child: pw.Text(
-                          '備考   ${draftDetail['customer']['remark'] ?? ''}',
+                          '備考   ${orderDetail['remark']}',
                           style: pw.TextStyle(
                             fontFallback: [
                               _notoSanFont ?? pw.Font.helvetica(),
@@ -685,7 +589,7 @@ class _Item2State extends State<Item2> {
                           )),
                         ),
                         child: pw.Text(
-                          'コメント   ${draftDetail['customer']['comment'] ?? ''}',
+                          'コメント   ${orderDetail['comment']}',
                           style: pw.TextStyle(
                             fontFallback: [
                               _notoSanFont ?? pw.Font.helvetica(),
@@ -818,7 +722,7 @@ class _Item2State extends State<Item2> {
                           ],
                         ),
 // Table rows
-                        for (var product in draftDetail['products'])
+                        for (var product in orderDetail['products'])
                           pw.TableRow(
                             decoration: pw.BoxDecoration(
                                 // Add borders to the row
@@ -828,7 +732,7 @@ class _Item2State extends State<Item2> {
                                 alignment: pw.Alignment.center,
                                 child: pw.Padding(
                                   padding: const pw.EdgeInsets.all(8.0),
-                                  child: pw.Text(product['productJan'] ?? ''),
+                                  child: pw.Text(product['jancd'] ?? ''),
                                 ),
                               ),
                               pw.Container(
@@ -911,7 +815,27 @@ class _Item2State extends State<Item2> {
     }
   }
 
-  void showDetailDialog(Map<String, dynamic> draftDetail) {
+  void filterOrders(String searchText) {
+    setState(() {
+      filteredOrders = orders
+          .where((order) =>
+              order['customer']['name']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()) ||
+              order['customer']['branch']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()) ||
+              order['salePerson']['fullname']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void showDetailDialog(Map<String, dynamic> orderDetail) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -934,7 +858,7 @@ class _Item2State extends State<Item2> {
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        '下書き内容詳細',
+                        '注文内容詳細',
                         style: TextStyle(
                           fontSize: 24.0,
                           fontWeight: FontWeight.w600,
@@ -952,7 +876,7 @@ class _Item2State extends State<Item2> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             // Generate PDF and download
-                            await _generateAndDownloadPDF(context, draftDetail);
+                            await _generateAndDownloadPDF(context, orderDetail);
                           },
                           icon: Icon(Icons.download),
                           label: Text(
@@ -975,35 +899,66 @@ class _Item2State extends State<Item2> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '下書き作成者    ${draftDetail['user']['name']}',
-                        style: TextStyle(
-                          fontFamily: 'Hiragino Sans',
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w300,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            '発注者    ',
+                            style: TextStyle(
+                              fontFamily: 'Hiragino Sans',
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          Text(
+                            '${orderDetail['salePerson']['fullname']}',
+                            style: TextStyle(
+                              fontFamily: 'Hiragino Sans',
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w300,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors
+                                  .grey[400], // Change to your desired color
+                              decorationThickness:
+                                  2.0, // Change to your desired thickness
+                              decorationStyle: TextDecorationStyle.solid, // E
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(
                         height: 10,
                       ),
-                      Text(
-                        '下書き保存日    ${draftDetail['created_at']}',
-                        style: TextStyle(
-                          fontFamily: 'Hiragino Sans',
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w300,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'クライアント    ',
+                            style: TextStyle(
+                              fontFamily: 'Hiragino Sans',
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w300,
+                            ),
+                          ),
+                          Text(
+                            '${orderDetail['customer']['name']}',
+                            style: TextStyle(
+                              fontFamily: 'Hiragino Sans',
+                              fontSize: 16.0,
+                              fontWeight: FontWeight.w300,
+
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors
+                                  .grey[400], // Change to your desired color
+
+                              decorationThickness:
+                                  2.0, // Change to your desired thickness
+                              decorationStyle: TextDecorationStyle
+                                  .solid, // Ensure the decoration is solid
+                            ),
+                          ),
+                        ],
                       ),
                       SizedBox(
                         height: 10,
-                      ),
-                      Text(
-                        'クライアント    ${draftDetail['customer']['clientName'] ?? 'N/A'}',
-                        style: TextStyle(
-                          fontFamily: 'Hiragino Sans',
-                          fontSize: 16.0,
-                          fontWeight: FontWeight.w300,
-                        ),
                       ),
                       SizedBox(
                         height: 20,
@@ -1020,7 +975,7 @@ class _Item2State extends State<Item2> {
                               ),
                             ),
                             TextSpan(
-                              text: '  ¥  ${calculateTotalPrice(draftDetail)}',
+                              text: '  ¥  ${calculateTotalAmount(orderDetail)}',
                               style: TextStyle(
                                 fontFamily: 'Hiragino Sans',
                                 fontSize: 20.0, // Increase the font size
@@ -1043,211 +998,220 @@ class _Item2State extends State<Item2> {
                   width: 900,
                   child: Table(
                     border: TableBorder.all(
-                        color: Color.fromARGB(255, 224, 224, 226)),
+                        color: Color.fromARGB(
+                            255, 224, 224, 226)), // Add borders to the table
                     children: [
-                      TableRow(children: [
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('得意先発注No')),
+                      TableRow(
+                        children: [
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('得意先発注No')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('得意先コード')),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('得意先コード')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('配達先')),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('配達先')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('出荷指定日')),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('出荷指定日')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('電話番号')),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('電話番号')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        TableCell(
-                          child: Container(
-                            color: Color(
-                                0x23131314), // Background color for the cell
-                            child: Center(
-                              child: SizedBox(
-                                height: 40, // Adjust the height as needed
-                                child: Center(child: Text('注文日時')),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: Center(
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Center(child: Text('注文日時')),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                      ]),
-                      TableRow(children: [
-                        TableCell(
+                        ],
+                      ),
+                      // Add more TableRow as needed
+
+                      TableRow(
+                        children: [
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child: Text(
-                                  '${draftDetail['customer']['orderNumber'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                    child: Text('${orderDetail['orderId']}')),
+                              ),
                             ),
                           ),
-                        )),
-                        TableCell(
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child: Text(
-                                  '${draftDetail['customer']['originalClientId'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child:
+                                    Center(child: Text('${orderDetail['pk']}')),
+                              ),
                             ),
                           ),
-                        )),
-                        TableCell(
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child: Text(
-                                  '${draftDetail['customer']['deliveryMethod'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                    child: Text(
+                                        '${orderDetail['customer']['branch']}')),
+                              ),
                             ),
                           ),
-                        )),
-                        TableCell(
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child: Text(
-                                  '${draftDetail['customer']['shippingDate'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(child: Text("")),
+                              ),
                             ),
                           ),
-                        )),
-                        TableCell(
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child: Text(
-                                  '${draftDetail['customer']['clientPhone'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                    child: Text(
+                                        '${orderDetail['customer']['phone']}')),
+                              ),
                             ),
                           ),
-                        )),
-                        TableCell(
+                          TableCell(
                             child: Center(
-                          child: SizedBox(
-                            height: 40,
-                            child: Center(
-                              child:
-                                  Text('${draftDetail['created_at'] ?? 'N/A'}'),
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                  child: (Text('')),
+                                ),
+                              ),
                             ),
-                          ),
-                        ))
-                      ]),
+                          )
+                        ],
+                      ),
+                      // Add more TableRow as needed
                     ],
                   ),
                 ),
                 SizedBox(
-                  height: 10,
+                  height: 20,
                 ),
                 Container(
-                    padding: EdgeInsets.only(left: 20),
-                    width: 600,
-                    child: Table(
-                      border: TableBorder.all(
-                          color: const Color.fromARGB(255, 224, 224, 226)),
-                      children: [
-                        TableRow(
-                          children: [
-                            TableCell(
-                              child: Container(
-                                color: Color(
-                                    0x23131314), // Background color for the cell
-                                child: Center(
-                                  child: SizedBox(
-                                    height: 40, // Adjust the height as needed
-                                    child: Center(child: Text('得意先発注No')),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              child: Container(
-                                color: Color(
-                                    0x23131314), // Background color for the cell
-                                child: Center(
-                                  child: SizedBox(
-                                    height: 40, // Adjust the height as needed
-                                    child: Center(child: Text('')),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        TableRow(
-                          children: [
-                            TableCell(
+                  padding: EdgeInsets.only(left: 20),
+                  width: 600,
+                  child: Table(
+                    border: TableBorder.all(
+                        color: const Color.fromARGB(
+                            255, 224, 224, 226)), // Add borders to the table
+                    children: [
+                      TableRow(
+                        children: [
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
                               child: Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(
-                                      child: Text(
-                                          '〒  ${draftDetail['customer']['clientPhone'] ?? 'N/A'}')),
+                                  child: Center(child: Text('お届け先')),
                                 ),
                               ),
                             ),
-                            TableCell(
+                          ),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
                               child: Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(
-                                      child: Text(
-                                          '${draftDetail['customer']['clientAddress'] ?? 'N/A'}')),
+                                  child: Center(child: Text('')),
                                 ),
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    )),
+                          ),
+                        ],
+                      ),
+                      // Add more TableRow as needed
+
+                      TableRow(
+                        children: [
+                          TableCell(
+                            child: Center(
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                    child: Text(
+                                        '〒  ${orderDetail['customer']['phone']}')),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: SizedBox(
+                                height: 40, // Adjust the height as needed
+                                child: Center(
+                                    child: Text(
+                                        '${orderDetail['customer']['address']}')),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Add more TableRow as needed
+                    ],
+                  ),
+                ),
                 Container(
                   width: 600,
                   child: Padding(
@@ -1260,8 +1224,7 @@ class _Item2State extends State<Item2> {
                           ),
                         ),
                       ),
-                      child: Text(
-                          '備考   ${draftDetail['customer']['remark'] ?? 'N/A'}'),
+                      child: Text('備考   ${orderDetail['remark']}'),
                     ),
                   ),
                 ),
@@ -1276,8 +1239,7 @@ class _Item2State extends State<Item2> {
                               color: Color.fromARGB(255, 224, 224, 226)),
                         ),
                       ),
-                      child: Text(
-                          'コメント   ${draftDetail['customer']['comment'] ?? 'N/A'}'),
+                      child: Text('コメント   ${orderDetail['comment']}'),
                     ),
                   ),
                 ),
@@ -1371,7 +1333,7 @@ class _Item2State extends State<Item2> {
                         ],
                       ),
                       // Table rows
-                      for (var product in draftDetail['products'] ?? 'N/A')
+                      for (var product in orderDetail['products'])
                         TableRow(
                           decoration: BoxDecoration(
                             border: Border.all(
@@ -1382,7 +1344,7 @@ class _Item2State extends State<Item2> {
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Text(product['productJan'] ?? 'N/A'),
+                                  child: Text(product['jancd'] ?? ''),
                                 ),
                               ),
                             ),
@@ -1390,7 +1352,7 @@ class _Item2State extends State<Item2> {
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Text(product['productCode'] ?? 'N/A'),
+                                  child: Text(product['productCode'] ?? ''),
                                 ),
                               ),
                             ),
@@ -1398,16 +1360,7 @@ class _Item2State extends State<Item2> {
                               child: Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
-                                  child: Text(product['productName'] ?? 'N/A'),
-                                ),
-                              ),
-                            ),
-                            TableCell(
-                              child: Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                      product['quantity']?.toString() ?? 'N/A'),
+                                  child: Text(product['productName'] ?? ''),
                                 ),
                               ),
                             ),
@@ -1416,8 +1369,16 @@ class _Item2State extends State<Item2> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    product['productUnitPrice']?.toString() ??
-                                        'N/A',
+                                      product['quantity']?.toString() ?? ''),
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Text(
+                                    product['productPrice']?.toString() ?? '',
                                   ),
                                 ),
                               ),
@@ -1428,7 +1389,7 @@ class _Item2State extends State<Item2> {
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
                                     ((product['quantity'] ?? 0) *
-                                            (product['productUnitPrice'] ?? 0))
+                                            (product['productPrice'] ?? 0))
                                         .toString(),
                                   ),
                                 ),
@@ -1459,32 +1420,6 @@ class _Item2State extends State<Item2> {
 
   @override
   Widget build(BuildContext context) {
-    print('Sample Data Length: ${sampleData.length}');
-    print('Current Page: $_currentPage');
-    print('Rows Per Page: $_rowsPerPage');
-    if (_searchText.isNotEmpty) {
-      _filteredData = sampleData.where((data) {
-        // Apply filters
-        bool matchesClientName = data['customer'] != null &&
-            data['customer']['clientName'] != null &&
-            data['customer']['clientName']
-                .toLowerCase()
-                .contains(clientNameFilter.toLowerCase());
-        bool matchesStartDate = startDateFilter.isEmpty ||
-            (data['created_at'] != null &&
-                data['created_at'] >= startDateFilter);
-        bool matchesEndDate = endDateFilter.isEmpty ||
-            (data['created_at'] != null && data['created_at'] <= endDateFilter);
-        return matchesClientName && matchesStartDate && matchesEndDate;
-      }).toList();
-    } else {
-      _filteredData = sampleData;
-    }
-
-    int totalItems = sampleData.length;
-    int itemsPerPage = _rowsPerPage;
-    int totalPages = (totalItems / itemsPerPage).ceil();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1492,263 +1427,41 @@ class _Item2State extends State<Item2> {
           color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.only(top: 50.0, left: 16, right: 16),
           child: Text(
-            '下書き一覧',
+            '注文一覧',
             style: TextStyle(
               fontFamily: 'Noto Sans JP',
               fontSize: 26.0,
               fontWeight: FontWeight.w700,
-              height: 1.5, // Adjust line height using height property
+              height: 1.5,
             ),
           ),
         ),
         Container(
           color: Color.fromARGB(255, 243, 243, 243),
-          padding: const EdgeInsets.only(top: 10.0, right: 16, left: 16),
+          padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16),
           child: TextField(
-            controller: _searchController,
             onChanged: (value) {
-              setState(() {
-                _searchText =
-                    value.toLowerCase(); // Convert search text to lowercase
-              });
+              filterOrders(value);
             },
             decoration: InputDecoration(
               hintText: '名前などを入力',
               prefixIcon: Icon(Icons.person_search),
               suffixIcon: IconButton(
                 icon: Icon(Icons.filter_list),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return Stack(
-                        children: [
-                          Positioned(
-                              right: 0,
-                              top: 200,
-                              child: Dialog(
-                                insetPadding:
-                                    EdgeInsets.symmetric(horizontal: 16.0),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(50.0),
-                                ),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(10.0),
-                                    color: Colors.white,
-                                  ),
-                                  width:
-                                      MediaQuery.of(context).size.width * 0.4,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.all(0.0),
-                                        child: Text(
-                                          '',
-                                          style: TextStyle(
-                                            fontSize: 24.0,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: 16.0),
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  'クライアント',
-                                                  style: TextStyle(
-                                                    fontSize: 16.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration:
-                                                        InputDecoration(),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  '発注者           ',
-                                                  style: TextStyle(
-                                                    fontSize: 16.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration:
-                                                        InputDecoration(),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  '注文日時       ',
-                                                  style: TextStyle(
-                                                    fontSize: 16.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration: InputDecoration(
-                                                      hintText: 'Start Date',
-                                                      suffixIcon: Icon(Icons
-                                                          .calendar_today), // Move calendar icon to the end
-                                                    ),
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '   〜   ',
-                                                  style: TextStyle(
-                                                    fontSize: 23.0,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration: InputDecoration(
-                                                      hintText: 'End Date',
-                                                      suffixIcon: Icon(Icons
-                                                          .calendar_today), // Move calendar icon to the end
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                Text(
-                                                  '希望納品日   ',
-                                                  style: TextStyle(
-                                                    fontSize: 16.0,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration: InputDecoration(
-                                                      hintText: 'Start Date',
-                                                      suffixIcon: Icon(Icons
-                                                          .calendar_today), // Move calendar icon to the end
-                                                    ),
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '   〜   ',
-                                                  style: TextStyle(
-                                                    fontSize: 23.0,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                SizedBox(width: 8.0),
-                                                Expanded(
-                                                  child: TextField(
-                                                    decoration: InputDecoration(
-                                                      hintText: 'End Date',
-                                                      suffixIcon: Icon(Icons
-                                                          .calendar_today), // Move calendar icon to the end
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      SizedBox(height: 16.0),
-                                      Padding(
-                                        padding: EdgeInsets.only(
-                                            right: 16, bottom: 16),
-                                        child: Align(
-                                          alignment: Alignment.bottomRight,
-                                          child: Container(
-                                            height: 40,
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              gradient: LinearGradient(
-                                                colors: [
-                                                  Color(0xFF202284),
-                                                  Color(0xFFAB7CAE),
-                                                ],
-                                                begin: Alignment.topLeft,
-                                                end: Alignment.bottomRight,
-                                                stops: [0.0, 1.0],
-                                                tileMode: TileMode.clamp,
-                                              ),
-                                            ),
-                                            child: ElevatedButton(
-                                              onPressed: () {
-                                                // Handle view detail button press
-                                              },
-                                              style: ButtonStyle(
-                                                backgroundColor:
-                                                    MaterialStateProperty.all(
-                                                        Colors.transparent),
-                                                shape:
-                                                    MaterialStateProperty.all<
-                                                        RoundedRectangleBorder>(
-                                                  RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8),
-                                                  ),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '検索する',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ))
-                        ],
-                      ); // Show the FilterWidget dialog
-                    },
-                  );
-                  // Implement your filter logic here
-                },
+                onPressed: () {},
               ),
             ),
           ),
         ),
         Container(
           color: Color.fromARGB(255, 243, 243, 243),
-          padding: const EdgeInsets.only(top: 20.0, right: 16, left: 16),
+          padding: const EdgeInsets.only(top: 10.0, right: 16, left: 16),
           alignment: Alignment.centerRight,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('1-$_upperLimit件目を表示'), // Text before dropdown button
-              SizedBox(
-                  width:
-                      16), // Add some space between the text and dropdown button
+              Text('1-$_upperLimit件目を表示'),
+              SizedBox(width: 16),
               Row(
                 children: [
                   Text('1ページあたりの表示件数'),
@@ -1789,93 +1502,63 @@ class _Item2State extends State<Item2> {
             ],
           ),
         ),
+        SizedBox(
+          height: 10,
+          child: Container(
+            color: Color.fromARGB(255, 243, 243, 243),
+          ),
+        ),
         Expanded(
           child: Container(
             color: Color.fromARGB(255, 243, 243, 243),
-            padding: const EdgeInsets.only(top: 10.0, right: 20, left: 20),
             child: SingleChildScrollView(
-              child: Table(
-                children: [
-                  // Header row
-                  TableRow(
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(color: Colors.grey),
-                      ), // Add borders to the row
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Table(
+                  children: [
+                    // Header row
+                    const TableRow(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey),
+                        ),
+                      ),
+                      children: [
+                        TableCell(child: Center(child: Text(''))),
+                        TableCell(child: Center(child: Text('クライアント'))),
+                        TableCell(child: Center(child: Text('アイテム数'))),
+                        TableCell(child: Center(child: Text('合計金額'))),
+                        TableCell(child: Center(child: Text('下書き作成者'))),
+                        TableCell(child: Center(child: Text('下書き保存日'))),
+                        TableCell(child: Center(child: Text('希望納品日'))),
+                        TableCell(child: Center(child: Text(''))),
+                      ],
                     ),
-                    children: [
-                      TableCell(child: Center(child: Text(''))),
-                      TableCell(child: Center(child: Text('クライアント'))),
-                      TableCell(child: Center(child: Text('アイテム数'))),
-                      TableCell(child: Center(child: Text('合計金額'))),
-                      TableCell(child: Center(child: Text('下書き作成者'))),
-                      TableCell(child: Center(child: Text('下書き保存日'))),
-                      TableCell(child: Center(child: Text('希望納品日'))),
-                      TableCell(child: Center(child: Text(''))),
-                    ],
-                  ),
-                  // Data rows
-                  if (_filteredData != null && _filteredData.isNotEmpty)
-                    for (var data in _filteredData.sublist(
-                        (_currentPage - 1) * _rowsPerPage,
-                        min((_currentPage * _rowsPerPage),
-                            _filteredData.length)))
+                    // Data rows
+                    for (var order
+                        in filteredOrders) // Update to use filteredOrders for (var order in orders)
                       TableRow(
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
                           border: Border(
                             top: BorderSide(
-                              width:
-                                  8, // Adjust the width of the border as needed
+                              width: 8,
                               color: Color.fromARGB(255, 243, 243, 243),
                             ),
                             bottom: BorderSide(
-                              width:
-                                  5, // Adjust the width of the border as needed
+                              width: 5,
                               color: Color.fromARGB(255, 243, 243, 243),
                             ),
                           ),
                         ),
                         children: [
+                          // Fill in the table cells with the order data
                           TableCell(
-                            child: SizedBox(
-                              width: 200, // Set your desired width here
+                            child: Center(
                               child: Padding(
                                 padding: const EdgeInsets.only(
-                                  top: 11.0,
-                                  bottom: 9.0,
-                                ),
-                                child: Center(
-                                  child: OutlinedButton(
-                                    onPressed: () {},
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: Color.fromARGB(255, 40, 41, 131),
-                                        width:
-                                            1.0, // Adjust the width of the border as needed
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal:
-                                            0.0, // Adjust left and right padding as needed
-                                      ),
-                                      child: Text(
-                                        'FAX依頼',
-                                        style: TextStyle(
-                                          color:
-                                              Color.fromARGB(255, 40, 41, 131),
-                                          fontFamily: 'Hiragino Sans',
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w300,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                    top: 17.0, bottom: 12),
+                                child: Text(''),
                               ),
                             ),
                           ),
@@ -1884,20 +1567,7 @@ class _Item2State extends State<Item2> {
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
-                                child: Text(data['customer'] != null
-                                    ? data['customer']['clientName'] ?? ''
-                                    : ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(data['products'] != null
-                                    ? data['products'].length.toString() ?? ''
-                                    : ''),
+                                child: Text(order['customer']['name'] ?? ''),
                               ),
                             ),
                           ),
@@ -1907,29 +1577,8 @@ class _Item2State extends State<Item2> {
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
                                 child: Text(
-                                  calculateTotalPrice(data),
+                                  '${order['products'].length}',
                                 ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(data['user'] != null
-                                    ? data['user']['name'] ?? ''
-                                    : ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(DateFormat('yyyy/MM/dd').format(
-                                    DateTime.parse(data['created_at'] ?? ''))),
                               ),
                             ),
                           ),
@@ -1939,28 +1588,51 @@ class _Item2State extends State<Item2> {
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
                                 child: Text(
-                                  data['customer']['shippingDate'] != null
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(
-                                              data['customer']['shippingDate']))
-                                      : '', // Format the shipping date if it exists, otherwise use an empty string
+                                  '${calculateTotalAmount(order)}', // Total amount
                                 ),
                               ),
                             ),
                           ),
                           TableCell(
-                            child: SizedBox(
-                              width: 104, // Set your desired width here
+                            child: Center(
                               child: Padding(
                                 padding: const EdgeInsets.only(
-                                  top: 11.0,
-                                  bottom: 9.0,
-                                ),
+                                    top: 17.0, bottom: 12),
+                                child:
+                                    Text(order['salePerson']['fullname'] ?? ''),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(order[''] ?? ''),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(order[''] ?? ''),
+                              ),
+                            ),
+                          ),
+
+                          TableCell(
+                            child: SizedBox(
+                              width: 200,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 11.0, bottom: 9.0),
                                 child: Center(
                                   child: DecoratedBox(
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(40),
-                                      gradient: LinearGradient(
+                                      gradient: const LinearGradient(
                                         colors: [
                                           Color(0xFF202284),
                                           Color(0xFFAB7CAE),
@@ -1973,7 +1645,7 @@ class _Item2State extends State<Item2> {
                                     ),
                                     child: ElevatedButton(
                                       onPressed: () {
-                                        showDetailDialog(data);
+                                        showDetailDialog(order);
                                       },
                                       style: ButtonStyle(
                                         backgroundColor:
@@ -1989,8 +1661,7 @@ class _Item2State extends State<Item2> {
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                          horizontal:
-                                              20.0, // Adjust left and right padding as needed
+                                          horizontal: 20.0,
                                         ),
                                         child: Text(
                                           '詳細',
@@ -2007,7 +1678,8 @@ class _Item2State extends State<Item2> {
                           ),
                         ],
                       ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -2093,6 +1765,12 @@ class _Item2State extends State<Item2> {
                 ),
               ),
             ],
+          ),
+        ),
+        SizedBox(
+          height: 30,
+          child: Container(
+            color: Color.fromARGB(255, 243, 243, 243),
           ),
         ),
       ],

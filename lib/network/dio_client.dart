@@ -5,7 +5,7 @@ import 'package:raymay/api/token_manager.dart';
 Dio createDio() {
   final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'https://qos.reimei-fujii.developers.engineerforce.io/api/v1',
+      baseUrl: 'https://rfqos.internal.engineerforce.io/api/v1/',
       connectTimeout: const Duration(milliseconds: 5000),
       receiveTimeout: const Duration(milliseconds: 3000),
     ),

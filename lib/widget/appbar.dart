@@ -13,20 +13,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.5),
-            spreadRadius: 5,
-            blurRadius: 7,
-            offset: Offset(0, 3),
+        border: Border(
+          bottom: BorderSide(
+            color: Colors.grey, // Adjust the color as needed
+            width: 1.0, // Adjust the width as needed
           ),
-        ],
+        ),
       ),
       child: AppBar(
         title: Row(
           children: [
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(0.0),
               child: Image.asset(
                 'assets/images/logo.png', // Replace with your logo image path
                 height: 33.0,

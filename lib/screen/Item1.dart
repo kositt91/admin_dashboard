@@ -99,7 +99,7 @@ class _Item1State extends State<Item1> {
   Future<void> fetchData2() async {
     final authToken = await TokenManager.getAccessToken();
     final Uri uri = Uri.parse(
-        'https://qos.reimei-fujii.developers.engineerforce.io/api/v1/user/admin-orders/');
+        'https://rfqos.internal.engineerforce.io/api/v1/user/admin-orders/');
     final Map<String, String> headers = {
       'Authorization': 'Bearer $authToken',
     };
@@ -133,7 +133,7 @@ class _Item1State extends State<Item1> {
   Future<void> fetchData() async {
     final authToken = await TokenManager.getAccessToken();
     final Uri uri = Uri.parse(
-        'https://qos.reimei-fujii.developers.engineerforce.io/api/v1/user/admin-orders/');
+        'https://rfqos.internal.engineerforce.io/api/v1/user/admin-orders/');
     final Map<String, String> headers = {
       'Authorization': 'Bearer $authToken',
     };
@@ -145,11 +145,12 @@ class _Item1State extends State<Item1> {
         // Decode the response body using UTF-8 encoding
         String responseBody = utf8.decode(response.bodyBytes);
         List<dynamic> data = jsonDecode(responseBody);
-        if (data.isNotEmpty && data[0] is List) {
-          // Check if data is not empty and is a list
+
+        // Assuming your JSON structure has a list of orders
+        if (data.isNotEmpty && data is List) {
+          // Update the state with the new data
           setState(() {
-            widget.sampleData =
-                data[0].cast<Map<String, dynamic>>(); // Access the inner list
+            widget.sampleData = data.cast<Map<String, dynamic>>();
           });
         } else {
           throw Exception('Data is not in the expected format');
@@ -189,7 +190,7 @@ class _Item1State extends State<Item1> {
     // Filter data based on search text and filter criteria
     return widget.sampleData.where((data) {
       // Check if any of the fields contain the search text
-      bool containsSearchText = (data['customer']['clientName'] ?? '')
+      bool containsSearchText = (data['customer']['name'] ?? '')
               .toLowerCase()
               .contains(_searchText.toLowerCase()) ||
           (data['created_at'] ?? '')
@@ -204,7 +205,7 @@ class _Item1State extends State<Item1> {
 
       // Add additional conditions based on selected data from filter dialog
       if (clientNameController.text.isNotEmpty) {
-        containsSearchText &= (data['customer']['clientName'] ?? '')
+        containsSearchText &= (data['customer']['name'] ?? '')
             .toLowerCase()
             .contains(clientNameController.text.toLowerCase());
       }
@@ -284,7 +285,7 @@ class _Item1State extends State<Item1> {
                                       return sampleData
                                           .where((Map<String, dynamic> option) {
                                         final clientName = option['customer']
-                                                    ?['clientName']
+                                                    ?['name']
                                                 ?.toLowerCase() ??
                                             '';
                                         return clientName.contains(
@@ -296,7 +297,7 @@ class _Item1State extends State<Item1> {
                                     },
                                     displayStringForOption:
                                         (Map<String, dynamic> option) =>
-                                            option['customer']['clientName'],
+                                            option['customer']['name'],
                                     fieldViewBuilder: (
                                       BuildContext context,
                                       TextEditingController
@@ -321,7 +322,7 @@ class _Item1State extends State<Item1> {
                                         (Map<String, dynamic> selection) {
                                       // Handle the selection
                                       String selectedClientName =
-                                          selection['customer']['clientName']
+                                          selection['customer']['name']
                                               .toString();
                                       clientNameController.text =
                                           selectedClientName;
@@ -640,7 +641,7 @@ class _Item1State extends State<Item1> {
                                 List<Map<String, dynamic>> filteredData =
                                     widget.sampleData.where((data) {
                                   String dataClientName =
-                                      (data['customer']['clientName'] ?? '')
+                                      (data['customer']['name'] ?? '')
                                           .toString()
                                           .toLowerCase();
                                   String dataUserName =
@@ -1685,8 +1686,7 @@ class _Item1State extends State<Item1> {
                               child: SizedBox(
                                 height: 40, // Adjust the height as needed
                                 child: Center(
-                                    child: Text(
-                                        '${draftDetail['customer']['orderNumber']}')),
+                                    child: Text('${draftDetail['orderId']}')),
                               ),
                             ),
                           ),
@@ -1694,9 +1694,8 @@ class _Item1State extends State<Item1> {
                             child: Center(
                               child: SizedBox(
                                 height: 40, // Adjust the height as needed
-                                child: Center(
-                                    child: Text(
-                                        '${draftDetail['customer']['originalClientId']}')),
+                                child:
+                                    Center(child: Text('${draftDetail['pk']}')),
                               ),
                             ),
                           ),
@@ -1732,7 +1731,7 @@ class _Item1State extends State<Item1> {
                                 height: 40, // Adjust the height as needed
                                 child: Center(
                                     child: Text(
-                                        '${draftDetail['customer']['clientPhone']}')),
+                                        '${draftDetail['customer']['phone']}')),
                               ),
                             ),
                           ),
@@ -1762,7 +1761,7 @@ class _Item1State extends State<Item1> {
                   width: 600,
                   child: Table(
                     border: TableBorder.all(
-                        color: Color.fromARGB(
+                        color: const Color.fromARGB(
                             255, 224, 224, 226)), // Add borders to the table
                     children: [
                       TableRow(
@@ -1803,7 +1802,7 @@ class _Item1State extends State<Item1> {
                                 height: 40, // Adjust the height as needed
                                 child: Center(
                                     child: Text(
-                                        '〒  ${draftDetail['customer']['clientPhone']}')),
+                                        '〒  ${draftDetail['customer']['phone']}')),
                               ),
                             ),
                           ),
@@ -1813,7 +1812,7 @@ class _Item1State extends State<Item1> {
                                 height: 40, // Adjust the height as needed
                                 child: Center(
                                     child: Text(
-                                        '${draftDetail['customer']['clientAddress']}')),
+                                        '${draftDetail['customer']['address']}')),
                               ),
                             ),
                           ),
@@ -1828,7 +1827,7 @@ class _Item1State extends State<Item1> {
                   child: Padding(
                     padding: EdgeInsets.only(left: 20, top: 10),
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
                             color: Color.fromARGB(255, 224, 224, 226),
@@ -1844,7 +1843,7 @@ class _Item1State extends State<Item1> {
                   child: Padding(
                     padding: EdgeInsets.only(left: 20, top: 10),
                     child: Container(
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
                               color: Color.fromARGB(255, 224, 224, 226)),
@@ -1874,7 +1873,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('JANコード')),
@@ -1886,7 +1885,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('型番')),
@@ -1898,7 +1897,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('品名')),
@@ -1910,7 +1909,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('数量')),
@@ -1922,7 +1921,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('価格')),
@@ -1934,7 +1933,7 @@ class _Item1State extends State<Item1> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: Center(
+                              child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
                                   child: Center(child: Text('金額')),
@@ -2075,6 +2074,7 @@ class _Item1State extends State<Item1> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Container(
+          color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.only(top: 50.0, left: 16, right: 16),
           child: Text(
             '注文一覧',
@@ -2087,6 +2087,7 @@ class _Item1State extends State<Item1> {
           ),
         ),
         Container(
+          color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 16),
           child: TextField(
             onChanged: (value) {
@@ -2109,6 +2110,7 @@ class _Item1State extends State<Item1> {
           ),
         ),
         Container(
+          color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.only(top: 10.0, right: 16, left: 16),
           alignment: Alignment.centerRight,
           child: Row(
@@ -2156,88 +2158,217 @@ class _Item1State extends State<Item1> {
             ],
           ),
         ),
+        SizedBox(
+          height: 10,
+          child: Container(
+            color: Color.fromARGB(255, 243, 243, 243),
+          ),
+        ),
         Expanded(
-          child: SingleChildScrollView(
-            child: DataTable(
-              columns: [
-                DataColumn(label: Text('クライアント')),
-                DataColumn(label: Text('ストア名')),
-                DataColumn(label: Text('区分')),
-                DataColumn(label: Text('注文者')),
-                DataColumn(label: Text('注文日時')),
-                DataColumn(label: Text('希望納品日')),
-                DataColumn(label: Text('アイテム数')),
-                DataColumn(label: Text('合計金額')),
-                DataColumn(label: Text('')),
-              ],
-              rows: _filteredData != null
-                  ? _filteredData
-                      .sublist((_currentPage - 1) * _rowsPerPage,
-                          min(_upperLimit, totalItems)) // Use min function
-                      .map<DataRow>((data) {
-                      return DataRow(cells: [
-                        DataCell(Text(data['customer']['clientName'] ?? '')),
-                        DataCell(Text(data['customer']['clientBranch'] ?? '')),
-                        DataCell(Text('')),
-                        DataCell(Text(data['user']['name'] ?? '')),
-                        DataCell(Text(DateFormat('yyyy/MM/dd')
-                            .format(DateTime.parse(data['created_at'] ?? '')))),
-                        DataCell(Text(
-                          data['customer']['shippingDate'] != null
-                              ? DateFormat('yyyy/MM/dd').format(DateTime.parse(
-                                  data['customer']['shippingDate']))
-                              : '', // Format the shipping date if it exists, otherwise use an empty string
-                        )),
-                        DataCell(
-                            Text(data['products'].length.toString() ?? '')),
-                        DataCell(Text(calculateTotalPrice(data))),
-                        DataCell(
-                          Container(
-                            width: 104,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(40),
-                              gradient: LinearGradient(
-                                colors: [
-                                  Color(0xFF202284),
-                                  Color(0xFFAB7CAE),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                stops: [0.0, 1.0],
-                                tileMode: TileMode.clamp,
+          child: Container(
+            color: Color.fromARGB(255, 243, 243, 243),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Table(
+                  children: [
+                    // Header row
+                    const TableRow(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey),
+                        ),
+                      ),
+                      children: [
+                        TableCell(child: Center(child: Text(''))),
+                        TableCell(child: Center(child: Text('クライアント'))),
+                        TableCell(child: Center(child: Text('ストア名'))),
+                        TableCell(child: Center(child: Text('区分'))),
+                        TableCell(child: Center(child: Text('注文者'))),
+                        TableCell(child: Center(child: Text('注文日時'))),
+                        TableCell(child: Center(child: Text('希望納品日'))),
+                        TableCell(child: Center(child: Text('アイテム数'))),
+                        TableCell(child: Center(child: Text('合計金額'))),
+                        TableCell(child: Center(child: Text(''))),
+                      ],
+                    ),
+                    // Data rows
+                    for (var data in _filteredData != null
+                        ? _filteredData.sublist(
+                            (_currentPage - 1) * _rowsPerPage,
+                            min(_upperLimit, totalItems))
+                        : [])
+                      TableRow(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            top: BorderSide(
+                              width: 8,
+                              color: Color.fromARGB(255, 243, 243, 243),
+                            ),
+                            bottom: BorderSide(
+                              width: 5,
+                              color: Color.fromARGB(255, 243, 243, 243),
+                            ),
+                          ),
+                        ),
+                        children: [
+                          const TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 17.0, bottom: 12),
+                                child: Text(''),
                               ),
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                showDetailDialog(
-                                    data); // Handle view detail button press
-                              },
-                              style: ButtonStyle(
-                                backgroundColor: MaterialStateProperty.all(
-                                    Colors.transparent),
-                                shape: MaterialStateProperty.all<
-                                    RoundedRectangleBorder>(
-                                  RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(40),
-                                  ),
-                                ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(data['customer']['name'] ?? ''),
                               ),
-                              child: Text(
-                                '詳細',
-                                style: TextStyle(
-                                  color: Colors.white,
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(data['customer']['address'] ?? ''),
+                              ),
+                            ),
+                          ),
+                          const TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: EdgeInsets.only(top: 17.0, bottom: 12),
+                                child: Text(''),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(data['user']['name'] ?? ''),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                  DateFormat('yyyy/MM/dd').format(
+                                    DateTime.parse(data['created_at'] ?? ''),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ]);
-                    }).toList()
-                  : [],
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                  data['customer']['shippingDate'] != null
+                                      ? DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(
+                                              data['customer']['shippingDate']),
+                                        )
+                                      : '',
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                    data['products'].length.toString() ?? ''),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child:
+                                    Text(calculateTotalPrice(data['products'])),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: SizedBox(
+                              width: 200,
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 11.0, bottom: 9.0),
+                                child: Center(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(40),
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF202284),
+                                          Color(0xFFAB7CAE),
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        stops: [0.0, 1.0],
+                                        tileMode: TileMode.clamp,
+                                      ),
+                                    ),
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        showDetailDialog(data);
+                                      },
+                                      style: ButtonStyle(
+                                        backgroundColor:
+                                            MaterialStateProperty.all(
+                                          Colors.transparent,
+                                        ),
+                                        shape: MaterialStateProperty.all(
+                                          RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(40),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 20.0,
+                                        ),
+                                        child: Text(
+                                          '詳細',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
         Container(
+          color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.all(8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2321,7 +2452,10 @@ class _Item1State extends State<Item1> {
         ),
         SizedBox(
           height: 30,
-        )
+          child: Container(
+            color: Color.fromARGB(255, 243, 243, 243),
+          ),
+        ),
       ],
     );
   }

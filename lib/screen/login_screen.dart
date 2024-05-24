@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:raymay/api/api_service.dart';
 import 'package:raymay/api/token_manager.dart';
+import 'package:raymay/main.dart';
 import 'package:raymay/network/auth_provider.dart';
-import 'package:raymay/screen/dashboard_screen.dart';
 import 'package:raymay/screen/forgot.dart';
 import 'package:raymay/widget/appbar.dart';
 
-class Login extends StatefulWidget {
+class LoginScreen extends StatefulWidget {
   @override
-  _LoginState createState() => _LoginState();
+  _LoginScreenState createState() => _LoginScreenState();
 }
 
-class _LoginState extends State<Login> {
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _loading = false;
@@ -27,8 +27,8 @@ class _LoginState extends State<Login> {
 
     try {
       // Create an instance of ApiService
-      ApiService apiService = ApiService(
-          'https://qos.reimei-fujii.developers.engineerforce.io/api/v1/login/');
+      ApiService apiService =
+          ApiService('https://rfqos.internal.engineerforce.io/api/v1/login/');
 
       // Call the login method on the instance
       final response = await apiService.login(email, password);
@@ -46,7 +46,7 @@ class _LoginState extends State<Login> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => DashboardScreen(),
+          builder: (context) => DashboardPage(),
         ),
       );
     } catch (e) {
