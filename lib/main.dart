@@ -120,7 +120,10 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       body: Row(
         children: [
-          Sidebar(onItemTapped: _onItemTapped),
+          Sidebar(
+            onItemTapped: _onItemTapped,
+            selectedIndex: _selectedIndex,
+          ),
           Expanded(
             child: _pages[_selectedIndex],
           ),

@@ -1427,7 +1427,7 @@ class _DraftPageState extends State<DraftPage> {
           color: Color.fromARGB(255, 243, 243, 243),
           padding: const EdgeInsets.only(top: 50.0, left: 16, right: 16),
           child: Text(
-            '注文一覧',
+            '下書き一覧',
             style: TextStyle(
               fontFamily: 'Noto Sans JP',
               fontSize: 26.0,
