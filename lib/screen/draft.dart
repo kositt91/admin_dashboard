@@ -40,14 +40,13 @@ class DraftPage extends StatefulWidget {
 }
 
 class _DraftPageState extends State<DraftPage> {
-  late List<dynamic> orders;
-  int _upperLimit = 10;
+  late List<dynamic> orders = [];
   int _rowsPerPage = 10;
   int _currentPage = 1;
   int totalPages = 0; // Initialize totalPages with a default value
   late int totalItems;
   late int itemsPerPage;
-  late List<dynamic> filteredOrders;
+  late List<dynamic> filteredOrders = [];
   pw.Font? _notoSanFont;
 
   @override
@@ -70,10 +69,8 @@ class _DraftPageState extends State<DraftPage> {
       setState(() {
         orders = data;
         totalItems = orders.length;
-        itemsPerPage = _rowsPerPage;
-        totalPages = (totalItems / itemsPerPage).ceil();
         filteredOrders = List.from(orders); // Initialize filteredOrders here
-        print(orders); // Print the fetched data
+        updatePagination();
       });
     } else {
       throw Exception('Failed to load data');
@@ -83,15 +80,20 @@ class _DraftPageState extends State<DraftPage> {
   void changeRowsPerPage(int value) {
     setState(() {
       _rowsPerPage = value;
-      _upperLimit = _currentPage * _rowsPerPage;
+      _currentPage = 1; // Reset to the first page whenever rows per page change
+      updatePagination();
     });
   }
 
   void navigateToPage(int page) {
     setState(() {
       _currentPage = page;
-      _upperLimit = _currentPage * _rowsPerPage;
+      updatePagination();
     });
+  }
+
+  void updatePagination() {
+    totalPages = (filteredOrders.length / _rowsPerPage).ceil();
   }
 
   String calculateTotalAmount(Map<String, dynamic> order) {
@@ -99,7 +101,32 @@ class _DraftPageState extends State<DraftPage> {
     for (var product in order['products']) {
       total += product['quantity'] * product['productPrice'];
     }
-    return total.toStringAsFixed(2); // Return total amount as a string
+    // Use NumberFormat to specify the desired format with comma as the decimal separator
+    final format = NumberFormat('#,##0', 'en_US');
+    return format.format(
+        total); // Return total amount as a string in the specified format
+  }
+
+  void filterOrders(String searchText) {
+    setState(() {
+      filteredOrders = orders
+          .where((order) =>
+              order['customer']['name']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()) ||
+              order['customer']['branch']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()) ||
+              order['salePerson']['fullname']
+                  .toString()
+                  .toLowerCase()
+                  .contains(searchText.toLowerCase()))
+          .toList();
+      _currentPage = 1; // Reset to the first page whenever filter changes
+      updatePagination();
+    });
   }
 
   Future<void> loadFont() async {
@@ -420,7 +447,14 @@ class _DraftPageState extends State<DraftPage> {
                               child: pw.SizedBox(
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
-                                  child: pw.Text(' '),
+                                  child: pw.Text(
+                                    orderDetail['updated'] != null &&
+                                            orderDetail['updated'].isNotEmpty
+                                        ? DateFormat('yyyy/MM/dd').format(
+                                            DateTime.parse(
+                                                orderDetail['updated']))
+                                        : '', // Format the shipping date if it exists, otherwise use an empty string
+                                  ),
                                 ),
                               ),
                             ),
@@ -447,7 +481,14 @@ class _DraftPageState extends State<DraftPage> {
                               child: pw.SizedBox(
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
-                                  child: pw.Text(''),
+                                  child: pw.Text(
+                                    orderDetail['updated'] != null &&
+                                            orderDetail['updated'].isNotEmpty
+                                        ? DateFormat('yyyy/MM/dd').format(
+                                            DateTime.parse(
+                                                orderDetail['updated']))
+                                        : '', // Format the shipping date if it exists, otherwise use an empty string
+                                  ),
                                 ),
                               ),
                             ),
@@ -564,7 +605,7 @@ class _DraftPageState extends State<DraftPage> {
                           ),
                         ),
                         child: pw.Text(
-                          '備考   ${orderDetail['remark']}',
+                          '備考   ${orderDetail['remark'] ?? 'N/A'}',
                           style: pw.TextStyle(
                             fontFallback: [
                               _notoSanFont ?? pw.Font.helvetica(),
@@ -589,7 +630,7 @@ class _DraftPageState extends State<DraftPage> {
                           )),
                         ),
                         child: pw.Text(
-                          'コメント   ${orderDetail['comment']}',
+                          'コメント   ${orderDetail['comment'] ?? 'N/A'}',
                           style: pw.TextStyle(
                             fontFallback: [
                               _notoSanFont ?? pw.Font.helvetica(),
@@ -762,7 +803,7 @@ class _DraftPageState extends State<DraftPage> {
                                 child: pw.Padding(
                                   padding: const pw.EdgeInsets.all(8.0),
                                   child: pw.Text(
-                                      product['productUnitPrice']?.toString() ??
+                                      product['productPrice']?.toString() ??
                                           ''),
                                 ),
                               ),
@@ -772,7 +813,7 @@ class _DraftPageState extends State<DraftPage> {
                                   padding: const pw.EdgeInsets.all(8.0),
                                   child: pw.Text(
                                     ((product['quantity'] ?? 0) *
-                                            (product['productUnitPrice'] ?? 0))
+                                            (product['productPrice'] ?? 0))
                                         .toString(),
                                   ),
                                 ),
@@ -814,28 +855,250 @@ class _DraftPageState extends State<DraftPage> {
       // Handle error if any
     }
   }
+  void _showFilterDialog() {
+    String clientFilter = '';
+    String purchaserFilter = '';
+    String orderStartDateFilter = '';
+    String orderEndDateFilter = '';
+    String deliveryStartDateFilter = '';
+    String deliveryEndDateFilter = '';
 
-  void filterOrders(String searchText) {
-    setState(() {
-      filteredOrders = orders
-          .where((order) =>
-              order['customer']['name']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()) ||
-              order['customer']['branch']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()) ||
-              order['salePerson']['fullname']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()))
-          .toList();
-    });
-  }
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Stack(
+          children: [
+            Positioned(
+              right: 0,
+              top: 200,
+              child: Dialog(
+                insetPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.0),
+                    color: Colors.white,
+                  ),
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Text(
+                          '',
+                          style: TextStyle(
+                            fontSize: 24.0,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
 
-  void showDetailDialog(Map<String, dynamic> orderDetail) {
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'クライアント',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (value) {
+                                      clientFilter = value;
+                                    },
+                                    decoration: InputDecoration(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '発注者           ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (value) {
+                                      purchaserFilter = value;
+                                    },
+                                    decoration: InputDecoration(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '注文日時       ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Start Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      orderStartDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                                Text(
+                                  '   〜   ',
+                                  style: TextStyle(
+                                    fontSize: 23.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'End Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      orderEndDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '希望納品日   ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Start Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      deliveryStartDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                                Text(
+                                  '   〜   ',
+                                  style: TextStyle(
+                                    fontSize: 23.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'End Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      deliveryEndDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16.0),
+                      Padding(
+                        padding: EdgeInsets.only(right: 16, bottom: 16),
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFF202284),
+                                  Color(0xFFAB7CAE),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                stops: [0.0, 1.0],
+                                tileMode: TileMode.clamp,
+                              ),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  filteredOrders = orders.where((order) {
+                                    final customerName = order['customer']['name']?.toLowerCase() ?? '';
+                                    final purchaser = order['salePerson']['fullname']?.toLowerCase() ?? '';
+                                    final orderDate = order['orderDate'] ?? '';
+                                    final deliveryDate = order['shippingDate'] ?? '';
+
+                                    bool matchesClientFilter = customerName.contains(clientFilter.toLowerCase());
+                                    bool matchesPurchaserFilter = purchaser.contains(purchaserFilter.toLowerCase());
+                                    bool matchesOrderDateFilter = (orderStartDateFilter.isEmpty || orderDate.compareTo(orderStartDateFilter) >= 0) &&
+                                        (orderEndDateFilter.isEmpty || orderDate.compareTo(orderEndDateFilter) <= 0);
+                                    bool matchesDeliveryDateFilter = (deliveryStartDateFilter.isEmpty || deliveryDate.compareTo(deliveryStartDateFilter) >= 0) &&
+                                        (deliveryEndDateFilter.isEmpty || deliveryDate.compareTo(deliveryEndDateFilter) <= 0);
+
+                                    return matchesClientFilter && matchesPurchaserFilter && matchesOrderDateFilter && matchesDeliveryDateFilter;
+                                  }).toList();
+                                });
+
+                                Navigator.of(context).pop();
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                elevation: MaterialStateProperty.all(0),
+                                shape: MaterialStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                '検索する',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }  void showDetailDialog(Map<String, dynamic> orderDetail) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1113,7 +1376,16 @@ class _DraftPageState extends State<DraftPage> {
                             child: Center(
                               child: SizedBox(
                                 height: 40, // Adjust the height as needed
-                                child: Center(child: Text("")),
+                                child: Center(
+                                  child: Text(
+                                    orderDetail['updated'] != null &&
+                                            orderDetail['updated'].isNotEmpty
+                                        ? DateFormat('yyyy/MM/dd').format(
+                                            DateTime.parse(
+                                                orderDetail['updated']))
+                                        : '', // Format the shipping date if it exists, otherwise use an empty string
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -1132,7 +1404,14 @@ class _DraftPageState extends State<DraftPage> {
                               child: SizedBox(
                                 height: 40, // Adjust the height as needed
                                 child: Center(
-                                  child: (Text('')),
+                                  child: Text(
+                                    orderDetail['updated'] != null &&
+                                            orderDetail['updated'].isNotEmpty
+                                        ? DateFormat('yyyy/MM/dd').format(
+                                            DateTime.parse(
+                                                orderDetail['updated']))
+                                        : '', // Format the shipping date if it exists, otherwise use an empty string
+                                  ),
                                 ),
                               ),
                             ),
@@ -1420,6 +1699,13 @@ class _DraftPageState extends State<DraftPage> {
 
   @override
   Widget build(BuildContext context) {
+    final startIndex = (_currentPage - 1) * _rowsPerPage;
+    final endIndex = (_currentPage * _rowsPerPage);
+    final displayedOrders = filteredOrders.sublist(
+      startIndex,
+      endIndex > filteredOrders.length ? filteredOrders.length : endIndex,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1448,7 +1734,7 @@ class _DraftPageState extends State<DraftPage> {
               prefixIcon: Icon(Icons.person_search),
               suffixIcon: IconButton(
                 icon: Icon(Icons.filter_list),
-                onPressed: () {},
+                onPressed: () { _showFilterDialog();},
               ),
             ),
           ),
@@ -1460,41 +1746,37 @@ class _DraftPageState extends State<DraftPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('1-$_upperLimit件目を表示'),
+              Text('1-${displayedOrders.length}件目を表示'),
               SizedBox(width: 16),
               Row(
                 children: [
                   Text('1ページあたりの表示件数'),
-                  SizedBox(width: 8), // Adjust the width as needed
+                  SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(
-                          color: Colors.grey), // Add border decoration
-                      borderRadius: BorderRadius.circular(
-                          4.0), // Add border radius if needed
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4.0),
                     ),
                     child: SizedBox(
                       width: 80,
-                      height: 30, // Adjust the width and height as needed
+                      height: 30,
                       child: Center(
-                        child: DropdownButton<int>(
-                          value: _rowsPerPage,
-                          onChanged: (value) {
-                            changeRowsPerPage(value!);
-                          },
-                          underline: SizedBox(), // Remove the underline
-                          icon: Icon(Icons.arrow_drop_down), // Set custom icon
-                          focusColor: Colors.transparent, // Remove active color
-
-                          items:
-                              [10, 15, 20].map<DropdownMenuItem<int>>((value) {
-                            return DropdownMenuItem<int>(
-                              value: value,
-                              child: Text('$value'),
-                            );
-                          }).toList(),
-                        ),
-                      ),
+                          child: DropdownButton<int>(
+                        value: _rowsPerPage,
+                        onChanged: (value) {
+                          changeRowsPerPage(value!);
+                        },
+                        underline:
+                            SizedBox(), // Correctly placed underline property
+                        icon: Icon(Icons.arrow_drop_down),
+                        focusColor: Colors.transparent,
+                        items: [10, 15, 20].map<DropdownMenuItem<int>>((value) {
+                          return DropdownMenuItem<int>(
+                            value: value,
+                            child: Text('$value'),
+                          );
+                        }).toList(),
+                      )),
                     ),
                   ),
                 ],
@@ -1515,6 +1797,17 @@ class _DraftPageState extends State<DraftPage> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Table(
+                  columnWidths: {
+                    // Define the width for each column
+                    0: FlexColumnWidth(2), // Adjust the width as needed
+                    1: FlexColumnWidth(4),
+                    2: FlexColumnWidth(1),
+                    3: FlexColumnWidth(2),
+                    4: FlexColumnWidth(4),
+                    5: FlexColumnWidth(2),
+                    6: FlexColumnWidth(2),
+                    7: FlexColumnWidth(3),
+                  },
                   children: [
                     // Header row
                     const TableRow(
@@ -1535,8 +1828,7 @@ class _DraftPageState extends State<DraftPage> {
                       ],
                     ),
                     // Data rows
-                    for (var order
-                        in filteredOrders) // Update to use filteredOrders for (var order in orders)
+                    for (var order in displayedOrders)
                       TableRow(
                         decoration: const BoxDecoration(
                           color: Colors.white,
@@ -1554,11 +1846,44 @@ class _DraftPageState extends State<DraftPage> {
                         children: [
                           // Fill in the table cells with the order data
                           TableCell(
-                            child: Center(
+                            child: SizedBox(
+                              width: 200, // Set your desired width here
                               child: Padding(
                                 padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(''),
+                                  top: 11.0,
+                                  bottom: 9.0,
+                                ),
+                                child: Center(
+                                  child: OutlinedButton(
+                                    onPressed: () {},
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(
+                                        color: Color.fromARGB(255, 40, 41, 131),
+                                        width:
+                                            1.0, // Adjust the width of the border as needed
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal:
+                                            0.0, // Adjust left and right padding as needed
+                                      ),
+                                      child: Text(
+                                        'FAX依頼',
+                                        style: TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 40, 41, 131),
+                                          fontFamily: 'Hiragino Sans',
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w300,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -1588,7 +1913,7 @@ class _DraftPageState extends State<DraftPage> {
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
                                 child: Text(
-                                  '${calculateTotalAmount(order)}', // Total amount
+                                  calculateTotalAmount(order), // Total amount
                                 ),
                               ),
                             ),
@@ -1608,7 +1933,13 @@ class _DraftPageState extends State<DraftPage> {
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
-                                child: Text(order[''] ?? ''),
+                                child: Text(
+                                  order['updated'] != null &&
+                                          order['updated'].isNotEmpty
+                                      ? DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(order['updated']))
+                                      : '', // Format the shipping date if it exists, otherwise use an empty string
+                                ),
                               ),
                             ),
                           ),
@@ -1617,7 +1948,13 @@ class _DraftPageState extends State<DraftPage> {
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
-                                child: Text(order[''] ?? ''),
+                                child: Text(
+                                  order['created'] != null &&
+                                          order['created'].isNotEmpty
+                                      ? DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(order['created']))
+                                      : '', // Format the shipping date if it exists, otherwise use an empty string
+                                ),
                               ),
                             ),
                           ),
@@ -1710,7 +2047,6 @@ class _DraftPageState extends State<DraftPage> {
                   ],
                 ),
               ),
-
               SizedBox(width: 16), // Add spacing between the buttons
               ...List.generate(
                 totalPages,

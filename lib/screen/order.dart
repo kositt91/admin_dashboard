@@ -40,14 +40,13 @@ class OrderPage extends StatefulWidget {
 }
 
 class _OrderPageState extends State<OrderPage> {
-  late List<dynamic> orders;
-  int _upperLimit = 10;
+  late List<dynamic> orders = [];
   int _rowsPerPage = 10;
   int _currentPage = 1;
-  int totalPages = 0; // Initialize totalPages with a default value
+  int totalPages = 0;
   late int totalItems;
-  late int itemsPerPage;
-  late List<dynamic> filteredOrders;
+  late List<dynamic> filteredOrders = [];
+
   pw.Font? _notoSanFont;
 
   @override
@@ -70,10 +69,8 @@ class _OrderPageState extends State<OrderPage> {
       setState(() {
         orders = data;
         totalItems = orders.length;
-        itemsPerPage = _rowsPerPage;
-        totalPages = (totalItems / itemsPerPage).ceil();
+        totalPages = (totalItems / _rowsPerPage).ceil();
         filteredOrders = List.from(orders); // Initialize filteredOrders here
-        print(orders); // Print the fetched data
       });
     } else {
       throw Exception('Failed to load data');
@@ -83,14 +80,14 @@ class _OrderPageState extends State<OrderPage> {
   void changeRowsPerPage(int value) {
     setState(() {
       _rowsPerPage = value;
-      _upperLimit = _currentPage * _rowsPerPage;
+      _currentPage = 1; // Reset to the first page when rows per page changes
+      totalPages = (totalItems / _rowsPerPage).ceil();
     });
   }
 
   void navigateToPage(int page) {
     setState(() {
       _currentPage = page;
-      _upperLimit = _currentPage * _rowsPerPage;
     });
   }
 
@@ -99,15 +96,293 @@ class _OrderPageState extends State<OrderPage> {
     for (var product in order['products']) {
       total += product['quantity'] * product['productPrice'];
     }
-    return total.toStringAsFixed(2); // Return total amount as a string
+    // Use the NumberFormat class to format the total with a comma
+    final formatter = NumberFormat('#,##0', 'en_US');
+    return formatter.format(total); // Return total amount as a formatted string
   }
 
   Future<void> loadFont() async {
-    ByteData fontData = await rootBundle.load("/fonts/notosan.ttf");
+    ByteData fontData = await rootBundle.load("fonts/notosan.ttf");
     setState(() {
       _notoSanFont = pw.Font.ttf(fontData);
     });
   }
+
+  void filterOrders(String searchText) {
+    setState(() {
+      filteredOrders = orders
+          .where((order) =>
+      order['customer']['name']
+          .toString()
+          .toLowerCase()
+          .contains(searchText.toLowerCase()) ||
+          order['customer']['branch']
+              .toString()
+              .toLowerCase()
+              .contains(searchText.toLowerCase()) ||
+          order['salePerson']['fullname']
+              .toString()
+              .toLowerCase()
+              .contains(searchText.toLowerCase()))
+          .toList();
+    });
+  }
+
+  void _showFilterDialog() {
+    String clientFilter = '';
+    String purchaserFilter = '';
+    String orderStartDateFilter = '';
+    String orderEndDateFilter = '';
+    String deliveryStartDateFilter = '';
+    String deliveryEndDateFilter = '';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Stack(
+          children: [
+            Positioned(
+              right: 0,
+              top: 200,
+              child: Dialog(
+                insetPadding: EdgeInsets.symmetric(horizontal: 16.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50.0),
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.0),
+                    color: Colors.white,
+                  ),
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(0.0),
+                        child: Text(
+                          '',
+                          style: TextStyle(
+                            fontSize: 24.0,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'クライアント',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (value) {
+                                      clientFilter = value;
+                                    },
+                                    decoration: InputDecoration(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '発注者           ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    onChanged: (value) {
+                                      purchaserFilter = value;
+                                    },
+                                    decoration: InputDecoration(),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '注文日時       ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Start Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      orderStartDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                                Text(
+                                  '   〜   ',
+                                  style: TextStyle(
+                                    fontSize: 23.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'End Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      orderEndDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  '希望納品日   ',
+                                  style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Start Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      deliveryStartDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                                Text(
+                                  '   〜   ',
+                                  style: TextStyle(
+                                    fontSize: 23.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 8.0),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'End Date',
+                                      suffixIcon: Icon(Icons.calendar_today),
+                                    ),
+                                    onChanged: (value) {
+                                      deliveryEndDateFilter = value;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 16.0),
+                      Padding(
+                        padding: EdgeInsets.only(right: 16, bottom: 16),
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: Container(
+                            height: 40,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              gradient: LinearGradient(
+                                colors: [
+                                  Color(0xFF202284),
+                                  Color(0xFFAB7CAE),
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                stops: [0.0, 1.0],
+                                tileMode: TileMode.clamp,
+                              ),
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  filteredOrders = orders.where((order) {
+                                    final customerName = order['customer']['name']?.toLowerCase() ?? '';
+                                    final purchaser = order['salePerson']['fullname']?.toLowerCase() ?? '';
+                                    final orderDate = order['orderDate'] ?? '';
+                                    final deliveryDate = order['shippingDate'] ?? '';
+
+                                    bool matchesClientFilter = customerName.contains(clientFilter.toLowerCase());
+                                    bool matchesPurchaserFilter = purchaser.contains(purchaserFilter.toLowerCase());
+                                    bool matchesOrderDateFilter = (orderStartDateFilter.isEmpty || orderDate.compareTo(orderStartDateFilter) >= 0) &&
+                                        (orderEndDateFilter.isEmpty || orderDate.compareTo(orderEndDateFilter) <= 0);
+                                    bool matchesDeliveryDateFilter = (deliveryStartDateFilter.isEmpty || deliveryDate.compareTo(deliveryStartDateFilter) >= 0) &&
+                                        (deliveryEndDateFilter.isEmpty || deliveryDate.compareTo(deliveryEndDateFilter) <= 0);
+
+                                    return matchesClientFilter && matchesPurchaserFilter && matchesOrderDateFilter && matchesDeliveryDateFilter;
+                                  }).toList();
+                                });
+
+                                Navigator.of(context).pop();
+                              },
+                              style: ButtonStyle(
+                                backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                elevation: MaterialStateProperty.all(0),
+                                shape: MaterialStateProperty.all(
+                                  RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                '検索する',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  // void filterOrders(String query) {
+  //   setState(() {
+  //     filteredOrders = orders.where((order) {
+  //       return order['customer']['name'].contains(query) ||
+  //           order['salePerson']['fullname'].contains(query);
+  //     }).toList();
+  //     totalItems = filteredOrders.length;
+  //     totalPages = (totalItems / _rowsPerPage).ceil();
+  //     _currentPage = 1;
+  //   });
+  // }
 
 // Create a PDF document
   Future<void> _generateAndDownloadPDF(
@@ -756,7 +1031,7 @@ class _OrderPageState extends State<OrderPage> {
                                 alignment: pw.Alignment.center,
                                 child: pw.Padding(
                                   padding: const pw.EdgeInsets.all(8.0),
-                                  child: pw.Text(product['productJan'] ?? ''),
+                                  child: pw.Text(product['jancd'] ?? ''),
                                 ),
                               ),
                               pw.Container(
@@ -786,7 +1061,7 @@ class _OrderPageState extends State<OrderPage> {
                                 child: pw.Padding(
                                   padding: const pw.EdgeInsets.all(8.0),
                                   child: pw.Text(
-                                      product['productUnitPrice']?.toString() ??
+                                      product['productPrice']?.toString() ??
                                           ''),
                                 ),
                               ),
@@ -796,7 +1071,7 @@ class _OrderPageState extends State<OrderPage> {
                                   padding: const pw.EdgeInsets.all(8.0),
                                   child: pw.Text(
                                     ((product['quantity'] ?? 0) *
-                                            (product['productUnitPrice'] ?? 0))
+                                            (product['productPrice'] ?? 0))
                                         .toString(),
                                   ),
                                 ),
@@ -825,7 +1100,7 @@ class _OrderPageState extends State<OrderPage> {
 
       // Create an anchor element
       final anchorElement = html.AnchorElement(href: pdfUrl)
-        ..setAttribute("download", "draft_detail.pdf")
+        ..setAttribute("download", "order_detail.pdf")
         ..text = "Download PDF";
 
       // Trigger a click event to start the download
@@ -839,25 +1114,25 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
-  void filterOrders(String searchText) {
-    setState(() {
-      filteredOrders = orders
-          .where((order) =>
-              order['customer']['name']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()) ||
-              order['customer']['branch']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()) ||
-              order['salePerson']['fullname']
-                  .toString()
-                  .toLowerCase()
-                  .contains(searchText.toLowerCase()))
-          .toList();
-    });
-  }
+  // void filterOrders(String searchText) {
+  //   setState(() {
+  //     filteredOrders = orders
+  //         .where((order) =>
+  //             order['customer']['name']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()) ||
+  //             order['customer']['branch']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()) ||
+  //             order['salePerson']['fullname']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()))
+  //         .toList();
+  //   });
+  // }
 
   void showDetailDialog(Map<String, dynamic> orderDetail) {
     showDialog(
@@ -1453,6 +1728,11 @@ class _OrderPageState extends State<OrderPage> {
 
   @override
   Widget build(BuildContext context) {
+    int start = ((_currentPage - 1) * _rowsPerPage).clamp(0, filteredOrders.length);
+    int end = (_currentPage * _rowsPerPage).clamp(0, filteredOrders.length);
+
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1481,7 +1761,9 @@ class _OrderPageState extends State<OrderPage> {
               prefixIcon: Icon(Icons.person_search),
               suffixIcon: IconButton(
                 icon: Icon(Icons.filter_list),
-                onPressed: () {},
+                onPressed: () {
+                  _showFilterDialog();
+                },
               ),
             ),
           ),
@@ -1493,7 +1775,7 @@ class _OrderPageState extends State<OrderPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('1-$_upperLimit件目を表示'),
+              Text('${start + 1}-${end}件目を表示'),
               SizedBox(width: 16),
               Row(
                 children: [
@@ -1513,12 +1795,12 @@ class _OrderPageState extends State<OrderPage> {
                         child: DropdownButton<int>(
                           value: _rowsPerPage,
                           onChanged: (value) {
+                            print("Dropdown value changed: $value");
                             changeRowsPerPage(value!);
                           },
                           underline: SizedBox(), // Remove the underline
                           icon: Icon(Icons.arrow_drop_down), // Set custom icon
                           focusColor: Colors.transparent, // Remove active color
-
                           items:
                               [10, 15, 20].map<DropdownMenuItem<int>>((value) {
                             return DropdownMenuItem<int>(
@@ -1573,7 +1855,6 @@ class _OrderPageState extends State<OrderPage> {
                         TableCell(child: Center(child: Text(''))),
                         TableCell(child: Center(child: Text('クライアント'))),
                         TableCell(child: Center(child: Text('ストア名'))),
-                        TableCell(child: Center(child: Text('区分'))),
                         TableCell(child: Center(child: Text('注文者'))),
                         TableCell(child: Center(child: Text('注文日時'))),
                         TableCell(child: Center(child: Text('希望納品日'))),
@@ -1583,8 +1864,7 @@ class _OrderPageState extends State<OrderPage> {
                       ],
                     ),
                     // Data rows
-                    for (var order
-                        in filteredOrders) // Update to use filteredOrders for (var order in orders)
+                    for (var order in filteredOrders.sublist(start, end))
                       TableRow(
                         decoration: const BoxDecoration(
                           color: Colors.white,
@@ -1604,12 +1884,33 @@ class _OrderPageState extends State<OrderPage> {
                           TableCell(
                             child: Center(
                               child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(''),
+                                padding: const EdgeInsets.only(top: 17.0, bottom: 12),
+                                child: (order['products'] != null && order['products'].isNotEmpty &&
+                                    order['products'][0]['quantity'] != null &&
+                                    order['products'][0]['stock'] != null) ?
+                                (() {
+                                  final orderQuantity = order['products'][0]['quantity'];
+                                  final stock = order['products'][0]['stock'];
+
+                                  if (orderQuantity > stock) {
+                                    return Tooltip(
+                                      message: '在庫切れ',
+                                      child: Icon(
+                                        Icons.error_outline_rounded,
+                                        size: 24.0,
+                                        color: Colors.red,
+                                      ),
+                                    );
+                                  } else {
+                                    return SizedBox.shrink();
+                                  }
+                                })() : SizedBox.shrink(),
                               ),
                             ),
                           ),
+
+
+
                           TableCell(
                             child: Center(
                               child: Padding(
@@ -1628,15 +1929,7 @@ class _OrderPageState extends State<OrderPage> {
                               ),
                             ),
                           ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(''),
-                              ),
-                            ),
-                          ),
+
                           TableCell(
                             child: Center(
                               child: Padding(
@@ -1652,42 +1945,50 @@ class _OrderPageState extends State<OrderPage> {
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                     top: 17.0, bottom: 12),
-                                child: Text(order['shippingDate'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(order['shippingDate'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
                                 child: Text(
-                                  '${order['products'].length}', // Item count
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  '${calculateTotalAmount(order)}', // Total amount
+                                  order['shippingDate'] != null
+                                      ? DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(order['shippingDate']))
+                                      : '', // Format the shipping date if it exists, otherwise use an empty string
                                 ),
                               ),
                             ),
                           ),
 
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                  order['shippingDate'] != null
+                                      ? DateFormat('yyyy/MM/dd').format(
+                                          DateTime.parse(order['shippingDate']))
+                                      : '', // Format the shipping date if it exists, otherwise use an empty string
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                    '${order['products'].length}'), // Item count
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: Text(
+                                    '${calculateTotalAmount(order)}'), // Total amount
+                              ),
+                            ),
+                          ),
                           TableCell(
                             child: SizedBox(
                               width: 200,
@@ -1776,7 +2077,6 @@ class _OrderPageState extends State<OrderPage> {
                   ],
                 ),
               ),
-
               SizedBox(width: 16), // Add spacing between the buttons
               ...List.generate(
                 totalPages,

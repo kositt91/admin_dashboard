@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:raymay/api/token_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:raymay/screen/login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Sidebar extends StatefulWidget {
   final Function(int) onItemTapped;
@@ -25,6 +27,15 @@ class _SidebarState extends State<Sidebar> {
   void initState() {
     super.initState();
     fetchData();
+  }
+
+  void logout(BuildContext context) async {
+    await clearToken(); // Make sure to call the clearToken function
+
+    // Navigate back to the LoginScreen
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+    );
   }
 
   Future<void> fetchData() async {
@@ -184,7 +195,7 @@ class _SidebarState extends State<Sidebar> {
                       title:
                           Text('ログアウト', style: TextStyle(color: Colors.white)),
                       onTap: () {
-                        // Handle logout action
+                        logout(context); // Call the logout function here
                       },
                     ),
                   ),
@@ -193,4 +204,6 @@ class _SidebarState extends State<Sidebar> {
             ),
     );
   }
+
+  clearToken() {}
 }
