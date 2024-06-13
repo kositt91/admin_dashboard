@@ -334,8 +334,16 @@ class _OrderPageState extends State<OrderPage> {
                                     bool matchesPurchaserFilter = purchaser.contains(purchaserFilter.toLowerCase());
                                     bool matchesOrderDateFilter = (orderStartDateFilter.isEmpty || orderDate.compareTo(orderStartDateFilter) >= 0) &&
                                         (orderEndDateFilter.isEmpty || orderDate.compareTo(orderEndDateFilter) <= 0);
-                                    bool matchesDeliveryDateFilter = (deliveryStartDateFilter.isEmpty || deliveryDate.compareTo(deliveryStartDateFilter) >= 0) &&
-                                        (deliveryEndDateFilter.isEmpty || deliveryDate.compareTo(deliveryEndDateFilter) <= 0);
+
+                                    bool matchesDeliveryDateFilter = true;
+                                    if (deliveryDate.isNotEmpty) {
+                                      final deliveryDateParsed = DateTime.parse(deliveryDate);
+                                      final deliveryStartDateParsed = deliveryStartDateFilter.isNotEmpty ? DateTime.parse(deliveryStartDateFilter) : null;
+                                      final deliveryEndDateParsed = deliveryEndDateFilter.isNotEmpty ? DateTime.parse(deliveryEndDateFilter) : null;
+
+                                      matchesDeliveryDateFilter = (deliveryStartDateParsed == null || deliveryDateParsed.isAfter(deliveryStartDateParsed) || deliveryDateParsed.isAtSameMomentAs(deliveryStartDateParsed)) &&
+                                          (deliveryEndDateParsed == null || deliveryDateParsed.isBefore(deliveryEndDateParsed) || deliveryDateParsed.isAtSameMomentAs(deliveryEndDateParsed));
+                                    }
 
                                     return matchesClientFilter && matchesPurchaserFilter && matchesOrderDateFilter && matchesDeliveryDateFilter;
                                   }).toList();
