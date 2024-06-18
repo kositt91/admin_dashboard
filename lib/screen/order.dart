@@ -46,9 +46,23 @@ class _OrderPageState extends State<OrderPage> {
   int totalPages = 0;
   late int totalItems;
   late List<dynamic> filteredOrders = [];
-
+  String clientFilter = ''; // Initialize with an empty string
+  String purchaserFilter = '';
+  String orderStartDateFilter = '';
+  String orderEndDateFilter = '';
+  String deliveryStartDateFilter = '';
+  String deliveryEndDateFilter = '';
   pw.Font? _notoSanFont;
 
+  TextEditingController clientFilterController = TextEditingController();
+  TextEditingController purchaserFilterController = TextEditingController();
+  TextEditingController orderStartDateFilterController =
+      TextEditingController();
+  TextEditingController orderEndDateFilterController = TextEditingController();
+  TextEditingController deliveryStartDateFilterController =
+      TextEditingController();
+  TextEditingController deliveryEndDateFilterController =
+      TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -110,32 +124,81 @@ class _OrderPageState extends State<OrderPage> {
 
   void filterOrders(String searchText) {
     setState(() {
-      filteredOrders = orders
-          .where((order) =>
-      order['customer']['name']
-          .toString()
-          .toLowerCase()
-          .contains(searchText.toLowerCase()) ||
-          order['customer']['branch']
-              .toString()
-              .toLowerCase()
-              .contains(searchText.toLowerCase()) ||
-          order['salePerson']['fullname']
-              .toString()
-              .toLowerCase()
-              .contains(searchText.toLowerCase()))
-          .toList();
+      filteredOrders = orders.where((order) {
+        final customerName =
+            order['customer']['name']?.toString()?.toLowerCase() ?? '';
+        final customerBranch =
+            order['customer']['branch']?.toString()?.toLowerCase() ?? '';
+        final salePersonName =
+            order['salePerson']['fullname']?.toString()?.toLowerCase() ?? '';
+
+        bool matchesSearchText =
+            customerName.contains(searchText.toLowerCase()) ||
+                customerBranch.contains(searchText.toLowerCase()) ||
+                salePersonName.contains(searchText.toLowerCase());
+
+        bool matchesClientFilter = clientFilter.isEmpty ||
+            customerName.contains(clientFilter.toLowerCase());
+        bool matchesPurchaserFilter = purchaserFilter.isEmpty ||
+            salePersonName.contains(purchaserFilter.toLowerCase());
+
+        bool matchesOrderDateFilter = (orderStartDateFilter.isEmpty ||
+                order['shippingDate'].compareTo(orderStartDateFilter) >= 0) &&
+            (orderEndDateFilter.isEmpty ||
+                order['shippingDate'].compareTo(orderEndDateFilter) <= 0);
+
+        bool matchesDeliveryDateFilter = (deliveryStartDateFilter.isEmpty ||
+                order['shippingDate'].compareTo(deliveryStartDateFilter) >=
+                    0) &&
+            (deliveryEndDateFilter.isEmpty ||
+                order['shippingDate'].compareTo(deliveryEndDateFilter) <= 0);
+
+        return matchesSearchText &&
+            matchesClientFilter &&
+            matchesPurchaserFilter &&
+            matchesOrderDateFilter &&
+            matchesDeliveryDateFilter;
+      }).toList();
     });
   }
 
-  void _showFilterDialog() {
-    String clientFilter = '';
-    String purchaserFilter = '';
-    String orderStartDateFilter = '';
-    String orderEndDateFilter = '';
-    String deliveryStartDateFilter = '';
-    String deliveryEndDateFilter = '';
+  // void filterOrders(String searchText) {
+  //   setState(() {
+  //     filteredOrders = orders
+  //         .where((order) =>
+  //             order['customer']['name']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()) ||
+  //             order['customer']['branch']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()) ||
+  //             order['salePerson']['fullname']
+  //                 .toString()
+  //                 .toLowerCase()
+  //                 .contains(searchText.toLowerCase()))
+  //         .toList();
+  //   });
+  // }
+  Future<void> _selectDate(BuildContext context,
+      TextEditingController controller, Function(String) onDateSelected) async {
+    DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      String formattedDate = "${picked.toLocal()}".split(' ')[0];
+      setState(() {
+        controller.text = formattedDate;
+        onDateSelected(formattedDate);
+      });
+    }
+  }
 
+  void _showFilterDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -169,7 +232,6 @@ class _OrderPageState extends State<OrderPage> {
                           ),
                         ),
                       ),
-
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Column(
@@ -186,8 +248,11 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller: clientFilterController,
                                     onChanged: (value) {
-                                      clientFilter = value;
+                                      setState(() {
+                                        clientFilter = value;
+                                      });
                                     },
                                     decoration: InputDecoration(),
                                   ),
@@ -206,8 +271,11 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller: purchaserFilterController,
                                     onChanged: (value) {
-                                      purchaserFilter = value;
+                                      setState(() {
+                                        purchaserFilter = value;
+                                      });
                                     },
                                     decoration: InputDecoration(),
                                   ),
@@ -226,12 +294,29 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller: orderStartDateFilterController,
                                     decoration: InputDecoration(
-                                      hintText: 'Start Date',
-                                      suffixIcon: Icon(Icons.calendar_today),
+                                      hintText: '2024-05-01',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.calendar_today),
+                                        onPressed: () {
+                                          _selectDate(context,
+                                              orderStartDateFilterController,
+                                              (value) {
+                                            setState(() {
+                                              orderStartDateFilter = value;
+                                              filterOrders(
+                                                  orderStartDateFilter);
+                                            });
+                                          });
+                                        },
+                                      ),
                                     ),
                                     onChanged: (value) {
-                                      orderStartDateFilter = value;
+                                      setState(() {
+                                        orderStartDateFilter = value;
+                                        filterOrders(orderStartDateFilter);
+                                      });
                                     },
                                   ),
                                 ),
@@ -245,12 +330,28 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller: orderEndDateFilterController,
                                     decoration: InputDecoration(
-                                      hintText: 'End Date',
-                                      suffixIcon: Icon(Icons.calendar_today),
+                                      hintText: '2024-05-01',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.calendar_today),
+                                        onPressed: () {
+                                          _selectDate(context,
+                                              orderEndDateFilterController,
+                                              (value) {
+                                            setState(() {
+                                              orderEndDateFilter = value;
+                                              filterOrders(orderEndDateFilter);
+                                            });
+                                          });
+                                        },
+                                      ),
                                     ),
                                     onChanged: (value) {
-                                      orderEndDateFilter = value;
+                                      setState(() {
+                                        orderEndDateFilter = value;
+                                        filterOrders(orderEndDateFilter);
+                                      });
                                     },
                                   ),
                                 ),
@@ -268,12 +369,31 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller:
+                                        deliveryStartDateFilterController,
                                     decoration: InputDecoration(
-                                      hintText: 'Start Date',
-                                      suffixIcon: Icon(Icons.calendar_today),
+                                      hintText: '2024-05-01',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.calendar_today),
+                                        onPressed: () {
+                                          _selectDate(context,
+                                              deliveryStartDateFilterController,
+                                              (value) {
+                                            setState(() {
+                                              deliveryStartDateFilter = value;
+                                              filterOrders(
+                                                  deliveryStartDateFilter); // Call your filter logic here if needed
+                                            });
+                                          });
+                                        },
+                                      ),
                                     ),
                                     onChanged: (value) {
-                                      deliveryStartDateFilter = value;
+                                      setState(() {
+                                        deliveryStartDateFilter = value;
+                                        filterOrders(
+                                            deliveryStartDateFilter); // Call your filter logic here if needed
+                                      });
                                     },
                                   ),
                                 ),
@@ -287,12 +407,30 @@ class _OrderPageState extends State<OrderPage> {
                                 SizedBox(width: 8.0),
                                 Expanded(
                                   child: TextField(
+                                    controller: deliveryEndDateFilterController,
                                     decoration: InputDecoration(
-                                      hintText: 'End Date',
-                                      suffixIcon: Icon(Icons.calendar_today),
+                                      hintText: '2024-05-01',
+                                      suffixIcon: IconButton(
+                                        icon: Icon(Icons.calendar_today),
+                                        onPressed: () {
+                                          _selectDate(context,
+                                              deliveryEndDateFilterController,
+                                              (value) {
+                                            setState(() {
+                                              deliveryEndDateFilter = value;
+                                              filterOrders(
+                                                  deliveryEndDateFilter); // Call your filter logic here if needed
+                                            });
+                                          });
+                                        },
+                                      ),
                                     ),
                                     onChanged: (value) {
-                                      deliveryEndDateFilter = value;
+                                      setState(() {
+                                        deliveryEndDateFilter = value;
+                                        filterOrders(
+                                            deliveryEndDateFilter); // Call your filter logic here if needed
+                                      });
                                     },
                                   ),
                                 ),
@@ -324,35 +462,89 @@ class _OrderPageState extends State<OrderPage> {
                             child: ElevatedButton(
                               onPressed: () {
                                 setState(() {
-                                  filteredOrders = orders.where((order) {
-                                    final customerName = order['customer']['name']?.toLowerCase() ?? '';
-                                    final purchaser = order['salePerson']['fullname']?.toLowerCase() ?? '';
-                                    final orderDate = order['orderDate'] ?? '';
-                                    final deliveryDate = order['shippingDate'] ?? '';
+                                  clientFilter = clientFilterController.text;
+                                  String purchaserFilter =
+                                      purchaserFilterController.text;
+                                  String orderStartDateFilter =
+                                      orderStartDateFilterController.text;
+                                  String orderEndDateFilter =
+                                      orderEndDateFilterController.text;
+                                  String deliveryStartDateFilter =
+                                      deliveryStartDateFilterController.text;
+                                  String deliveryEndDateFilter =
+                                      deliveryEndDateFilterController.text;
 
-                                    bool matchesClientFilter = customerName.contains(clientFilter.toLowerCase());
-                                    bool matchesPurchaserFilter = purchaser.contains(purchaserFilter.toLowerCase());
-                                    bool matchesOrderDateFilter = (orderStartDateFilter.isEmpty || orderDate.compareTo(orderStartDateFilter) >= 0) &&
-                                        (orderEndDateFilter.isEmpty || orderDate.compareTo(orderEndDateFilter) <= 0);
+                                  filteredOrders = orders.where((order) {
+                                    final customerName = order['customer']
+                                                ['name']
+                                            ?.toLowerCase() ??
+                                        '';
+                                    final purchaser = order['salePerson']
+                                                ['fullname']
+                                            ?.toLowerCase() ??
+                                        '';
+                                    final orderDate =
+                                        order['shippingDate'] ?? '';
+                                    final deliveryDate =
+                                        order['shippingDate'] ?? '';
+
+                                    bool matchesClientFilter = customerName
+                                        .contains(clientFilter.toLowerCase());
+                                    bool matchesPurchaserFilter =
+                                        purchaser.contains(
+                                            purchaserFilter.toLowerCase());
+                                    bool matchesOrderDateFilter =
+                                        (orderStartDateFilter.isEmpty ||
+                                                orderDate.compareTo(
+                                                        orderStartDateFilter) >=
+                                                    0) &&
+                                            (orderEndDateFilter.isEmpty ||
+                                                orderDate.compareTo(
+                                                        orderEndDateFilter) <=
+                                                    0);
 
                                     bool matchesDeliveryDateFilter = true;
                                     if (deliveryDate.isNotEmpty) {
-                                      final deliveryDateParsed = DateTime.parse(deliveryDate);
-                                      final deliveryStartDateParsed = deliveryStartDateFilter.isNotEmpty ? DateTime.parse(deliveryStartDateFilter) : null;
-                                      final deliveryEndDateParsed = deliveryEndDateFilter.isNotEmpty ? DateTime.parse(deliveryEndDateFilter) : null;
+                                      final deliveryDateParsed =
+                                          DateTime.parse(deliveryDate);
+                                      final deliveryStartDateParsed =
+                                          deliveryStartDateFilter.isNotEmpty
+                                              ? DateTime.parse(
+                                                  deliveryStartDateFilter)
+                                              : null;
+                                      final deliveryEndDateParsed =
+                                          deliveryEndDateFilter.isNotEmpty
+                                              ? DateTime.parse(
+                                                  deliveryEndDateFilter)
+                                              : null;
 
-                                      matchesDeliveryDateFilter = (deliveryStartDateParsed == null || deliveryDateParsed.isAfter(deliveryStartDateParsed) || deliveryDateParsed.isAtSameMomentAs(deliveryStartDateParsed)) &&
-                                          (deliveryEndDateParsed == null || deliveryDateParsed.isBefore(deliveryEndDateParsed) || deliveryDateParsed.isAtSameMomentAs(deliveryEndDateParsed));
+                                      matchesDeliveryDateFilter =
+                                          (deliveryStartDateParsed == null ||
+                                                  deliveryDateParsed.isAfter(
+                                                      deliveryStartDateParsed) ||
+                                                  deliveryDateParsed
+                                                      .isAtSameMomentAs(
+                                                          deliveryStartDateParsed)) &&
+                                              (deliveryEndDateParsed == null ||
+                                                  deliveryDateParsed.isBefore(
+                                                      deliveryEndDateParsed) ||
+                                                  deliveryDateParsed
+                                                      .isAtSameMomentAs(
+                                                          deliveryEndDateParsed));
                                     }
 
-                                    return matchesClientFilter && matchesPurchaserFilter && matchesOrderDateFilter && matchesDeliveryDateFilter;
+                                    return matchesClientFilter &&
+                                        matchesPurchaserFilter &&
+                                        matchesOrderDateFilter &&
+                                        matchesDeliveryDateFilter;
                                   }).toList();
                                 });
 
                                 Navigator.of(context).pop();
                               },
                               style: ButtonStyle(
-                                backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                                backgroundColor: MaterialStateProperty.all(
+                                    Colors.transparent),
                                 elevation: MaterialStateProperty.all(0),
                                 shape: MaterialStateProperty.all(
                                   RoundedRectangleBorder(
@@ -1734,12 +1926,41 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
+  Widget _buildFilterItem(
+      String text, Color backgroundColor, VoidCallback onClear) {
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius:
+            BorderRadius.circular(20), // Adjust border radius as needed
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white), // Text color
+          ),
+          SizedBox(width: 8),
+          InkWell(
+            onTap: onClear,
+            child: Icon(
+              Icons.close,
+              color: Colors.white, // Close button color
+              size: 18,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    int start = ((_currentPage - 1) * _rowsPerPage).clamp(0, filteredOrders.length);
+    int start =
+        ((_currentPage - 1) * _rowsPerPage).clamp(0, filteredOrders.length);
     int end = (_currentPage * _rowsPerPage).clamp(0, filteredOrders.length);
-
-
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1773,6 +1994,65 @@ class _OrderPageState extends State<OrderPage> {
                   _showFilterDialog();
                 },
               ),
+            ),
+          ),
+        ),
+        Container(
+          color: Color.fromARGB(255, 243, 243,
+              243), // Example color, replace with your desired color
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Row(
+              children: [
+                if (clientFilter.isNotEmpty) ...[
+                  _buildFilterItem(clientFilter, Color(0xFF292786), () {
+                    setState(() {
+                      clientFilter = '';
+                      filterOrders(clientFilter);
+                    });
+                  }),
+                  SizedBox(width: 10),
+                ],
+                if (purchaserFilter.isNotEmpty) ...[
+                  _buildFilterItem(purchaserFilter, Color(0xFF292786), () {
+                    setState(() {
+                      purchaserFilter = '';
+                      filterOrders(purchaserFilter);
+                    });
+                  }),
+                  SizedBox(width: 10),
+                ],
+                if (orderStartDateFilter.isNotEmpty ||
+                    orderEndDateFilter.isNotEmpty) ...[
+                  _buildFilterItem(
+                    '注文日：$orderStartDateFilter ~ $orderEndDateFilter',
+                    Color(0xFF292786),
+                    () {
+                      setState(() {
+                        orderStartDateFilter = '';
+                        orderEndDateFilter = '';
+                        filterOrders(orderStartDateFilter);
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10),
+                ],
+                if (deliveryStartDateFilter.isNotEmpty ||
+                    deliveryEndDateFilter.isNotEmpty) ...[
+                  _buildFilterItem(
+                    '希望納品日：$deliveryStartDateFilter ~ $deliveryEndDateFilter',
+                    Color(0xFF292786),
+                    () {
+                      setState(() {
+                        deliveryStartDateFilter = '';
+                        deliveryEndDateFilter = '';
+                        filterOrders(deliveryStartDateFilter);
+                      });
+                    },
+                  ),
+                  SizedBox(width: 10),
+                ],
+              ],
             ),
           ),
         ),
@@ -1892,32 +2172,36 @@ class _OrderPageState extends State<OrderPage> {
                           TableCell(
                             child: Center(
                               child: Padding(
-                                padding: const EdgeInsets.only(top: 17.0, bottom: 12),
-                                child: (order['products'] != null && order['products'].isNotEmpty &&
-                                    order['products'][0]['quantity'] != null &&
-                                    order['products'][0]['stock'] != null) ?
-                                (() {
-                                  final orderQuantity = order['products'][0]['quantity'];
-                                  final stock = order['products'][0]['stock'];
+                                padding: const EdgeInsets.only(
+                                    top: 17.0, bottom: 12),
+                                child: (order['products'] != null &&
+                                        order['products'].isNotEmpty &&
+                                        order['products'][0]['quantity'] !=
+                                            null &&
+                                        order['products'][0]['stock'] != null)
+                                    ? (() {
+                                        final orderQuantity =
+                                            order['products'][0]['quantity'];
+                                        final stock =
+                                            order['products'][0]['stock'];
 
-                                  if (orderQuantity > stock) {
-                                    return Tooltip(
-                                      message: '在庫切れ',
-                                      child: Icon(
-                                        Icons.error_outline_rounded,
-                                        size: 24.0,
-                                        color: Colors.red,
-                                      ),
-                                    );
-                                  } else {
-                                    return SizedBox.shrink();
-                                  }
-                                })() : SizedBox.shrink(),
+                                        if (orderQuantity > stock) {
+                                          return Tooltip(
+                                            message: '在庫切れ',
+                                            child: Icon(
+                                              Icons.error_outline_rounded,
+                                              size: 24.0,
+                                              color: Colors.red,
+                                            ),
+                                          );
+                                        } else {
+                                          return SizedBox.shrink();
+                                        }
+                                      })()
+                                    : SizedBox.shrink(),
                               ),
                             ),
                           ),
-
-
 
                           TableCell(
                             child: Center(
