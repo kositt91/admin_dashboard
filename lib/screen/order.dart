@@ -44,7 +44,7 @@ class _OrderPageState extends State<OrderPage> {
   int _rowsPerPage = 10;
   int _currentPage = 1;
   int totalPages = 0;
-  late int totalItems;
+  int totalItems = 0;
   late List<dynamic> filteredOrders = [];
   String clientFilter = ''; // Initialize with an empty string
   String purchaserFilter = '';
@@ -53,7 +53,7 @@ class _OrderPageState extends State<OrderPage> {
   String deliveryStartDateFilter = '';
   String deliveryEndDateFilter = '';
   pw.Font? _notoSanFont;
-
+  bool isLoading = true;
   TextEditingController clientFilterController = TextEditingController();
   TextEditingController purchaserFilterController = TextEditingController();
   TextEditingController orderStartDateFilterController =
@@ -68,6 +68,7 @@ class _OrderPageState extends State<OrderPage> {
     super.initState();
     fetchData();
     loadFont();
+    fetchTotalItemCount();
   }
 
   Future<void> fetchData() async {
@@ -88,6 +89,45 @@ class _OrderPageState extends State<OrderPage> {
       });
     } else {
       throw Exception('Failed to load data');
+    }
+  }
+
+  Future<void> fetchTotalItemCount() async {
+    try {
+      final authToken = await TokenManager.getAccessToken();
+      int page = 1;
+      int totalCount = 0;
+
+      while (true) {
+        final response = await http.get(
+          Uri.parse(
+              'https://rfqos.internal.engineerforce.io/api/v1/user/admin-orders/?page=$page'),
+          headers: {'Authorization': 'Bearer $authToken'},
+        );
+
+        if (response.statusCode == 200) {
+          final List<dynamic> data =
+              json.decode(utf8.decode(response.bodyBytes));
+          if (data.isEmpty) {
+            break; // No more pages, exit loop
+          }
+          totalCount += data.length;
+          page++;
+        } else {
+          throw Exception('Failed to load data');
+        }
+      }
+
+      setState(() {
+        totalItems = totalCount; // Update totalItems state variable
+        isLoading = false; // Update loading state
+      });
+    } catch (e) {
+      print('Error fetching total item count: $e');
+      setState(() {
+        isLoading = false; // Update loading state on error
+      });
+      // Handle error as needed
     }
   }
 
@@ -483,8 +523,7 @@ class _OrderPageState extends State<OrderPage> {
                                                 ['fullname']
                                             ?.toLowerCase() ??
                                         '';
-                                    final orderDate =
-                                        order['shippingDate'] ?? '';
+                                    final orderDate = order['created'] ?? '';
                                     final deliveryDate =
                                         order['shippingDate'] ?? '';
 
@@ -938,8 +977,7 @@ class _OrderPageState extends State<OrderPage> {
                                   child: pw.Text(
                                       DateFormat('yyyy/MM/dd').format(
                                           DateTime.parse(
-                                              orderDetail['shippingDate'] ??
-                                                  '')),
+                                              orderDetail['created'] ?? '')),
                                       style: pw.TextStyle(
                                         fontFallback: [
                                           _notoSanFont ??
@@ -1314,6 +1352,20 @@ class _OrderPageState extends State<OrderPage> {
     }
   }
 
+  Future<void> deleteOrder(String orderID) async {
+    final String url =
+        'https://rfqos.internal.engineerforce.io/api/v1/user/admin-orders/?orderID=$orderID';
+    final response = await http.delete(Uri.parse(url));
+
+    if (response.statusCode == 200) {
+      // Successfully deleted the order
+      print('Order deleted successfully');
+    } else {
+      // Error occurred while deleting the order
+      print('Failed to delete the order');
+    }
+  }
+
   // void filterOrders(String searchText) {
   //   setState(() {
   //     filteredOrders = orders
@@ -1366,29 +1418,76 @@ class _OrderPageState extends State<OrderPage> {
                     ),
                     Padding(
                       padding: EdgeInsets.only(right: 16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                              color: Color.fromARGB(255, 22, 59, 224)),
-                          borderRadius: BorderRadius.circular(40.0),
-                        ),
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            // Generate PDF and download
-                            await _generateAndDownloadPDF(context, orderDetail);
-                          },
-                          icon: Icon(Icons.download),
-                          label: Text(
-                            'PDFダウンロード',
-                            style: TextStyle(fontSize: 12.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Color.fromARGB(255, 214, 0, 0)),
+                              borderRadius: BorderRadius.circular(40.0),
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                await deleteOrder(orderDetail['id']);
+                              },
+                              icon: Icon(
+                                Icons.delete,
+                                color: Color.fromARGB(
+                                    255, 214, 0, 0), // Set icon color to red
+                              ),
+                              label: Text(
+                                '削除',
+                                style: TextStyle(
+                                  fontSize: 12.0,
+                                  color: Color.fromARGB(
+                                      255, 214, 0, 0), // Set text color to red
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors
+                                    .transparent, // Set background color to transparent
+                                shadowColor:
+                                    Colors.transparent, // Remove shadow
+                                elevation: 0, // Remove elevation
+                                foregroundColor: Color.fromARGB(255, 214, 0,
+                                    0), // Set foreground color to red
+                              ),
+                            ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors
-                                .transparent, // Set background color to transparent
-                            shadowColor: Colors.transparent, // Remove shadow
-                            elevation: 0, // Remove elevation
+                          SizedBox(
+                            width: 20,
                           ),
-                        ),
+                          Container(
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Color.fromARGB(255, 255, 255, 255)),
+                              borderRadius: BorderRadius.circular(40.0),
+                            ),
+                            child: ElevatedButton.icon(
+                              onPressed: () async {
+                                // Generate PDF and download
+                                await _generateAndDownloadPDF(
+                                    context, orderDetail);
+                              },
+                              icon: Icon(Icons.download, color: Colors.white),
+                              label: Text(
+                                'PDFダウンロード',
+                                style: TextStyle(
+                                    fontSize: 12.0, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Color(
+                                    0xFF292786), // Set background color to #292786
+                                shadowColor:
+                                    Colors.transparent, // Remove shadow
+                                elevation: 0, // Remove elevation
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(40.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1466,7 +1565,7 @@ class _OrderPageState extends State<OrderPage> {
                         text: TextSpan(
                           children: [
                             TextSpan(
-                              text: '下書き合計金額  ',
+                              text: '注文合計金額  ',
                               style: TextStyle(
                                 fontFamily: 'Hiragino Sans',
                                 fontSize: 16.0,
@@ -1585,7 +1684,8 @@ class _OrderPageState extends State<OrderPage> {
                               child: SizedBox(
                                 height: 40, // Adjust the height as needed
                                 child: Center(
-                                    child: Text('${orderDetail['orderId']}')),
+                                    child:
+                                        Text('${orderDetail['postalCode']}')),
                               ),
                             ),
                           ),
@@ -1640,7 +1740,7 @@ class _OrderPageState extends State<OrderPage> {
                                 child: Center(
                                   child: (Text(DateFormat('yyyy/MM/dd').format(
                                       DateTime.parse(
-                                          orderDetail['shippingDate'] ?? '')))),
+                                          orderDetail['created'] ?? '')))),
                                 ),
                               ),
                             ),
@@ -1760,8 +1860,17 @@ class _OrderPageState extends State<OrderPage> {
                   // Set the background color here
                   child: Table(
                     border: TableBorder.all(
-                        color: Color.fromARGB(
-                            255, 224, 224, 226)), // Add borders to the tabler
+                      color: Color.fromARGB(
+                          255, 224, 224, 226), // Add borders to the table
+                    ),
+                    columnWidths: {
+                      0: FlexColumnWidth(2),
+                      1: FlexColumnWidth(1),
+                      2: FlexColumnWidth(6),
+                      3: FlexColumnWidth(1),
+                      4: FlexColumnWidth(1),
+                      5: FlexColumnWidth(1),
+                    },
                     children: [
                       // Table header
                       TableRow(
@@ -1770,10 +1879,46 @@ class _OrderPageState extends State<OrderPage> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: const Center(
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('JANコード')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('JANコード'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('型番'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('品名'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1785,7 +1930,10 @@ class _OrderPageState extends State<OrderPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('型番')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('数量'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1797,7 +1945,10 @@ class _OrderPageState extends State<OrderPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('品名')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('価格'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1809,37 +1960,17 @@ class _OrderPageState extends State<OrderPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('数量')),
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Container(
-                              color: Color(
-                                  0x23131314), // Background color for the cell
-                              child: const Center(
-                                child: SizedBox(
-                                  height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('価格')),
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Container(
-                              color: Color(
-                                  0x23131314), // Background color for the cell
-                              child: const Center(
-                                child: SizedBox(
-                                  height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('金額')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('金額'),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ],
                       ),
+
                       // Table rows
                       for (var product in orderDetail['products'])
                         TableRow(
@@ -1849,7 +1980,8 @@ class _OrderPageState extends State<OrderPage> {
                           ),
                           children: [
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['jancd'] ?? ''),
@@ -1857,7 +1989,8 @@ class _OrderPageState extends State<OrderPage> {
                               ),
                             ),
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['productCode'] ?? ''),
@@ -1865,7 +1998,8 @@ class _OrderPageState extends State<OrderPage> {
                               ),
                             ),
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['productName'] ?? ''),
@@ -1886,8 +2020,8 @@ class _OrderPageState extends State<OrderPage> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    product['productPrice']?.toString() ?? '',
-                                  ),
+                                      product['productPrice']?.toString() ??
+                                          ''),
                                 ),
                               ),
                             ),
@@ -2114,232 +2248,404 @@ class _OrderPageState extends State<OrderPage> {
         Expanded(
           child: Container(
             color: Color.fromARGB(255, 243, 243, 243),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Table(
-                  columnWidths: {
-                    // Define the width for each column
-                    0: FlexColumnWidth(1), // Adjust the width as needed
-                    1: FlexColumnWidth(4),
-                    2: FlexColumnWidth(1),
-                    3: FlexColumnWidth(2),
-                    4: FlexColumnWidth(4),
-                    5: FlexColumnWidth(2),
-                    6: FlexColumnWidth(2),
-                    7: FlexColumnWidth(1),
-                    8: FlexColumnWidth(2),
-                    9: FlexColumnWidth(3),
-                  },
-                  children: [
-                    // Header row
-                    const TableRow(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.grey),
-                        ),
-                      ),
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: Column(
                       children: [
-                        TableCell(child: Center(child: Text(''))),
-                        TableCell(child: Center(child: Text('クライアント'))),
-                        TableCell(child: Center(child: Text('ストア名'))),
-                        TableCell(child: Center(child: Text('注文者'))),
-                        TableCell(child: Center(child: Text('注文日時'))),
-                        TableCell(child: Center(child: Text('希望納品日'))),
-                        TableCell(child: Center(child: Text('アイテム数'))),
-                        TableCell(child: Center(child: Text('合計金額'))),
-                        TableCell(child: Center(child: Text(''))),
-                      ],
-                    ),
-                    // Data rows
-                    for (var order in filteredOrders.sublist(start, end))
-                      TableRow(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            top: BorderSide(
-                              width: 8,
-                              color: Color.fromARGB(255, 243, 243, 243),
-                            ),
-                            bottom: BorderSide(
-                              width: 5,
-                              color: Color.fromARGB(255, 243, 243, 243),
-                            ),
-                          ),
-                        ),
-                        children: [
-                          // Fill in the table cells with the order data
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: (order['products'] != null &&
-                                        order['products'].isNotEmpty &&
-                                        order['products'][0]['quantity'] !=
-                                            null &&
-                                        order['products'][0]['stock'] != null)
-                                    ? (() {
-                                        final orderQuantity =
-                                            order['products'][0]['quantity'];
-                                        final stock =
-                                            order['products'][0]['stock'];
-
-                                        if (orderQuantity > stock) {
-                                          return Tooltip(
-                                            message: '在庫切れ',
-                                            child: Icon(
-                                              Icons.error_outline_rounded,
-                                              size: 24.0,
-                                              color: Colors.red,
-                                            ),
-                                          );
-                                        } else {
-                                          return SizedBox.shrink();
-                                        }
-                                      })()
-                                    : SizedBox.shrink(),
-                              ),
-                            ),
-                          ),
-
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(order['customer']['name'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(order['customer']['branch'] ?? ''),
-                              ),
-                            ),
-                          ),
-
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child:
-                                    Text(order['salePerson']['fullname'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  order['shippingDate'] != null
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(order['shippingDate']))
-                                      : '', // Format the shipping date if it exists, otherwise use an empty string
+                        SizedBox(height: 48), // Height of the sticky header
+                        Table(
+                          columnWidths: {
+                            0: FlexColumnWidth(2),
+                            1: FlexColumnWidth(6),
+                            2: FlexColumnWidth(3),
+                            3: FlexColumnWidth(3),
+                            4: FlexColumnWidth(2),
+                            5: FlexColumnWidth(2),
+                            6: FlexColumnWidth(2),
+                            7: FlexColumnWidth(2),
+                            8: FlexColumnWidth(3),
+                            9: FlexColumnWidth(2),
+                            10: FlexColumnWidth(1),
+                          },
+                          children: [
+                            for (var order
+                                in filteredOrders.sublist(start, end))
+                              TableRow(
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border(
+                                    top: BorderSide(
+                                      width: 8,
+                                      color: Color.fromARGB(255, 243, 243, 243),
+                                    ),
+                                    bottom: BorderSide(
+                                      width: 5,
+                                      color: Color.fromARGB(255, 243, 243, 243),
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          ),
+                                children: [
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: (order['products'] != null &&
+                                              order['products'].isNotEmpty &&
+                                              order['products'][0]
+                                                      ['quantity'] !=
+                                                  null &&
+                                              order['products'][0]['stock'] !=
+                                                  null)
+                                          ? (() {
+                                              final orderQuantity =
+                                                  order['products'][0]
+                                                      ['quantity'];
+                                              final stock =
+                                                  order['products'][0]['stock'];
 
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  order['shippingDate'] != null
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(order['shippingDate']))
-                                      : '', // Format the shipping date if it exists, otherwise use an empty string
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                    '${order['products'].length}'), // Item count
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                    '${calculateTotalAmount(order)}'), // Total amount
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: SizedBox(
-                              width: 200,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 11.0, bottom: 9.0),
-                                child: Center(
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(40),
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF202284),
-                                          Color(0xFFAB7CAE),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        stops: [0.0, 1.0],
-                                        tileMode: TileMode.clamp,
+                                              if (orderQuantity > stock) {
+                                                return Tooltip(
+                                                  message: '在庫切れ',
+                                                  child: Icon(
+                                                    Icons.error_outline_rounded,
+                                                    size: 24.0,
+                                                    color: Colors.red,
+                                                  ),
+                                                );
+                                              } else {
+                                                return SizedBox.shrink();
+                                              }
+                                            })()
+                                          : SizedBox.shrink(),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        order['customer']['name'] ?? '',
+                                        textAlign: TextAlign.left,
                                       ),
                                     ),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        showDetailDialog(order);
-                                      },
-                                      style: ButtonStyle(
-                                        backgroundColor:
-                                            MaterialStateProperty.all(
-                                          Colors.transparent,
-                                        ),
-                                        shape: MaterialStateProperty.all(
-                                          RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(40),
-                                          ),
-                                        ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        order['customer']['branch'] ?? '',
+                                        textAlign: TextAlign.left,
                                       ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        order['salePerson']['fullname'] ?? '',
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        order['created'] != null
+                                            ? DateFormat('yyyy/MM/dd').format(
+                                                DateTime.parse(
+                                                    order['created']))
+                                            : '',
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        order['shippingDate'] != null
+                                            ? DateFormat('yyyy/MM/dd').format(
+                                                DateTime.parse(
+                                                    order['shippingDate']))
+                                            : '',
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12, right: 80),
+                                      child: Text(
+                                        '${order['products'].length}',
+                                        textAlign: TextAlign.right,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(
+                                          top: 17.0, bottom: 12),
+                                      child: Text(
+                                        '${calculateTotalAmount(order)}',
+                                        textAlign: TextAlign.left,
+                                      ),
+                                    ),
+                                  ),
+                                  TableCell(
+                                    child: SizedBox(
+                                      width: 200,
                                       child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20.0,
-                                        ),
-                                        child: Text(
-                                          '詳細',
-                                          style: TextStyle(
-                                            color: Colors.white,
+                                        padding: const EdgeInsets.only(
+                                            top: 11.0, bottom: 9.0),
+                                        child: Center(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(40),
+                                              gradient: const LinearGradient(
+                                                colors: [
+                                                  Color(0xFF202284),
+                                                  Color(0xFFAB7CAE),
+                                                ],
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                stops: [0.0, 1.0],
+                                                tileMode: TileMode.clamp,
+                                              ),
+                                            ),
+                                            child: ElevatedButton(
+                                              onPressed: () {
+                                                showDetailDialog(order);
+                                              },
+                                              style: ButtonStyle(
+                                                backgroundColor:
+                                                    MaterialStateProperty.all(
+                                                  Colors.transparent,
+                                                ),
+                                                shape:
+                                                    MaterialStateProperty.all(
+                                                  RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            40),
+                                                  ),
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 20.0),
+                                                child: Text(
+                                                  '詳細',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
+                                  TableCell(
+                                    child: SizedBox(
+                                      width: 200,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                            top: 11.0, bottom: 9.0),
+                                        child: Center(
+                                          child: DecoratedBox(
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(40),
+                                              color: Colors
+                                                  .white, // Background color
+                                            ),
+                                            child: TextButton(
+                                              onPressed: () async {
+                                                await deleteOrder(order['id']);
+                                              },
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal:
+                                                        20.0), // Adjust padding as needed
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(40),
+                                                  side: BorderSide(
+                                                      color: const Color
+                                                          .fromARGB(
+                                                          255,
+                                                          255,
+                                                          255,
+                                                          255)), // Optional: border side
+                                                ),
+                                              ),
+                                              child: Text(
+                                                '削除', // Button text
+                                                style: TextStyle(
+                                                  color: const Color.fromARGB(
+                                                      255,
+                                                      232,
+                                                      2,
+                                                      2), // Text color
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    color: Color.fromARGB(255, 243, 243, 243),
+                    child: Table(
+                      columnWidths: {
+                        0: FlexColumnWidth(2),
+                        1: FlexColumnWidth(6),
+                        2: FlexColumnWidth(3),
+                        3: FlexColumnWidth(3),
+                        4: FlexColumnWidth(2),
+                        5: FlexColumnWidth(2),
+                        6: FlexColumnWidth(2),
+                        7: FlexColumnWidth(2),
+                        8: FlexColumnWidth(3),
+                        9: FlexColumnWidth(2),
+                        10: FlexColumnWidth(1),
+                      },
+                      children: [
+                        TableRow(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey),
+                            ),
+                          ),
+                          children: [
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '',
+                                  textAlign: TextAlign.left,
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                  ],
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  'クライアント',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  'ストア名',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '注文者',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '注文日時',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '希望納品日',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  'アイテム数',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '合計金額',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Text(
+                                  '',
+                                  textAlign: TextAlign.left,
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Text(
+                                '',
+                                textAlign: TextAlign.left,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -2349,6 +2655,15 @@ class _OrderPageState extends State<OrderPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              SizedBox(
+                width: 50,
+                child: Text(
+                  '全$totalItems件',
+                ),
+              ),
+              SizedBox(
+                width: 30,
+              ),
               GestureDetector(
                 onTap: () {
                   if (_currentPage > 1) {
@@ -2360,11 +2675,13 @@ class _OrderPageState extends State<OrderPage> {
                     Text('最初へ'),
                     IconButton(
                       icon: Icon(Icons.chevron_left),
-                      onPressed: () {
-                        if (_currentPage > 1) {
-                          navigateToPage(_currentPage - 1);
-                        }
-                      },
+                      onPressed: _currentPage > 1
+                          ? () {
+                              if (_currentPage > 1) {
+                                navigateToPage(_currentPage - 1);
+                              }
+                            }
+                          : null,
                     ),
                   ],
                 ),
@@ -2392,6 +2709,10 @@ class _OrderPageState extends State<OrderPage> {
                       child: Text(
                         '${index + 1}',
                         style: TextStyle(
+                          fontFamily: 'Hira',
+                          fontWeight: index + 1 == _currentPage
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: index + 1 == _currentPage
                               ? Color.fromARGB(255, 44, 22, 243)
                               : Colors.black,
@@ -2412,11 +2733,13 @@ class _OrderPageState extends State<OrderPage> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.chevron_right),
-                      onPressed: () {
-                        if (_currentPage < totalPages) {
-                          navigateToPage(_currentPage + 1);
-                        }
-                      },
+                      onPressed: _currentPage < totalPages
+                          ? () {
+                              if (_currentPage < totalPages) {
+                                navigateToPage(_currentPage + 1);
+                              }
+                            }
+                          : null,
                     ),
                     Text('最後へ'),
                   ],

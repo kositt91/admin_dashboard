@@ -196,7 +196,7 @@ class _ProfilePageState extends State<ProfilePage> {
       body: Padding(
         padding: const EdgeInsets.all(50.0),
         child: Container(
-          padding: const EdgeInsets.only(top: 50, left: 50, right: 700),
+          padding: const EdgeInsets.only(top: 50, left: 50, right: 100),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -263,7 +263,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             GestureDetector(
                               onTap: _showEditUserNameDialog,
                               child: Container(
-                                width: 800,
+                                width: 480,
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey),
                                   borderRadius: BorderRadius.circular(5),
@@ -287,13 +287,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.grey,
                           ),
                         ),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: '',
-                            border: OutlineInputBorder(),
+                        Container(
+                          width: 480,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: '',
+                              border: OutlineInputBorder(),
+                            ),
+                            enabled: false,
+                            controller: groupsController,
                           ),
-                          enabled: false,
-                          controller: groupsController,
                         ),
                         SizedBox(height: 10),
                         Text(
@@ -304,13 +307,16 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.grey,
                           ),
                         ),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: '',
-                            border: OutlineInputBorder(),
+                        Container(
+                          width: 480,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: '',
+                              border: OutlineInputBorder(),
+                            ),
+                            enabled: false,
+                            controller: emailController,
                           ),
-                          enabled: false,
-                          controller: emailController,
                         ),
                         SizedBox(height: 10),
                         Text(
@@ -321,14 +327,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             color: Colors.grey,
                           ),
                         ),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: '',
-                            border: OutlineInputBorder(),
+                        Container(
+                          width: 480,
+                          child: TextField(
+                            decoration: InputDecoration(
+                              labelText: '',
+                              border: OutlineInputBorder(),
+                            ),
+                            obscureText: true,
+                            enabled: false,
+                            controller: passwordController,
                           ),
-                          obscureText: true,
-                          enabled: false,
-                          controller: passwordController,
                         ),
                         SizedBox(height: 10),
                         GestureDetector(

@@ -44,7 +44,7 @@ class _DraftPageState extends State<DraftPage> {
   int _rowsPerPage = 10;
   int _currentPage = 1;
   int totalPages = 0; // Initialize totalPages with a default value
-  late int totalItems;
+  int totalItems = 0;
   late int itemsPerPage;
   late List<dynamic> filteredOrders = [];
   pw.Font? _notoSanFont;
@@ -513,11 +513,12 @@ class _DraftPageState extends State<DraftPage> {
                                 height: 25, // Adjust the height as needed
                                 child: pw.Center(
                                   child: pw.Text(
-                                    orderDetail['updated'] != null &&
-                                            orderDetail['updated'].isNotEmpty
+                                    orderDetail['shippingDate'] != null &&
+                                            orderDetail['shippingDate']
+                                                .isNotEmpty
                                         ? DateFormat('yyyy/MM/dd').format(
                                             DateTime.parse(
-                                                orderDetail['updated']))
+                                                orderDetail['shippingDate']))
                                         : '', // Format the shipping date if it exists, otherwise use an empty string
                                   ),
                                 ),
@@ -1152,13 +1153,13 @@ class _DraftPageState extends State<DraftPage> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
                               gradient: LinearGradient(
-                                colors: [
+                                colors: const [
                                   Color(0xFF202284),
                                   Color(0xFFAB7CAE),
                                 ],
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                stops: [0.0, 1.0],
+                                stops: const [0.0, 1.0],
                                 tileMode: TileMode.clamp,
                               ),
                             ),
@@ -1187,7 +1188,8 @@ class _DraftPageState extends State<DraftPage> {
                                             ?.toLowerCase() ??
                                         '';
                                     final orderDate = order['created'] ?? '';
-                                    final deliveryDate = order['created'] ?? '';
+                                    final deliveryDate =
+                                        order['shippingDate'] ?? '';
 
                                     bool matchesClientFilter = customerName
                                         .contains(clientFilter.toLowerCase());
@@ -1327,7 +1329,7 @@ class _DraftPageState extends State<DraftPage> {
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
-                        '注文内容詳細',
+                        '下書き内容詳細',
                         style: TextStyle(
                           fontSize: 24.0,
                           fontWeight: FontWeight.w600,
@@ -1584,11 +1586,12 @@ class _DraftPageState extends State<DraftPage> {
                                 height: 40, // Adjust the height as needed
                                 child: Center(
                                   child: Text(
-                                    orderDetail['updated'] != null &&
-                                            orderDetail['updated'].isNotEmpty
+                                    orderDetail['shippingDate'] != null &&
+                                            orderDetail['shippingDate']
+                                                .isNotEmpty
                                         ? DateFormat('yyyy/MM/dd').format(
                                             DateTime.parse(
-                                                orderDetail['updated']))
+                                                orderDetail['shippingDate']))
                                         : '', // Format the shipping date if it exists, otherwise use an empty string
                                   ),
                                 ),
@@ -1737,8 +1740,17 @@ class _DraftPageState extends State<DraftPage> {
                   // Set the background color here
                   child: Table(
                     border: TableBorder.all(
-                        color: Color.fromARGB(
-                            255, 224, 224, 226)), // Add borders to the tabler
+                      color: Color.fromARGB(
+                          255, 224, 224, 226), // Add borders to the table
+                    ),
+                    columnWidths: {
+                      0: FlexColumnWidth(2),
+                      1: FlexColumnWidth(1),
+                      2: FlexColumnWidth(6),
+                      3: FlexColumnWidth(1),
+                      4: FlexColumnWidth(1),
+                      5: FlexColumnWidth(1),
+                    },
                     children: [
                       // Table header
                       TableRow(
@@ -1747,10 +1759,46 @@ class _DraftPageState extends State<DraftPage> {
                             child: Container(
                               color: Color(
                                   0x23131314), // Background color for the cell
-                              child: const Center(
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('JANコード')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('JANコード'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('型番'),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          TableCell(
+                            child: Container(
+                              color: Color(
+                                  0x23131314), // Background color for the cell
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: SizedBox(
+                                  height: 40, // Adjust the height as needed
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('品名'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1762,7 +1810,10 @@ class _DraftPageState extends State<DraftPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('型番')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('数量'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1774,7 +1825,10 @@ class _DraftPageState extends State<DraftPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('品名')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('価格'),
+                                  ),
                                 ),
                               ),
                             ),
@@ -1786,37 +1840,17 @@ class _DraftPageState extends State<DraftPage> {
                               child: const Center(
                                 child: SizedBox(
                                   height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('数量')),
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Container(
-                              color: Color(
-                                  0x23131314), // Background color for the cell
-                              child: const Center(
-                                child: SizedBox(
-                                  height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('価格')),
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Container(
-                              color: Color(
-                                  0x23131314), // Background color for the cell
-                              child: const Center(
-                                child: SizedBox(
-                                  height: 40, // Adjust the height as needed
-                                  child: Center(child: Text('金額')),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text('金額'),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ],
                       ),
+
                       // Table rows
                       for (var product in orderDetail['products'])
                         TableRow(
@@ -1826,7 +1860,8 @@ class _DraftPageState extends State<DraftPage> {
                           ),
                           children: [
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['jancd'] ?? ''),
@@ -1834,7 +1869,8 @@ class _DraftPageState extends State<DraftPage> {
                               ),
                             ),
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['productCode'] ?? ''),
@@ -1842,7 +1878,8 @@ class _DraftPageState extends State<DraftPage> {
                               ),
                             ),
                             TableCell(
-                              child: Center(
+                              child: Align(
+                                alignment: Alignment.centerLeft,
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(product['productName'] ?? ''),
@@ -1863,8 +1900,8 @@ class _DraftPageState extends State<DraftPage> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Text(
-                                    product['productPrice']?.toString() ?? '',
-                                  ),
+                                      product['productPrice']?.toString() ??
+                                          ''),
                                 ),
                               ),
                             ),
@@ -2059,231 +2096,272 @@ class _DraftPageState extends State<DraftPage> {
         Expanded(
           child: Container(
             color: Color.fromARGB(255, 243, 243, 243),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Table(
-                  columnWidths: {
-                    // Define the width for each column
-                    0: FlexColumnWidth(2), // Adjust the width as needed
-                    1: FlexColumnWidth(4),
-                    2: FlexColumnWidth(1),
-                    3: FlexColumnWidth(2),
-                    4: FlexColumnWidth(4),
-                    5: FlexColumnWidth(2),
-                    6: FlexColumnWidth(2),
-                    7: FlexColumnWidth(3),
-                  },
-                  children: [
-                    // Header row
-                    const TableRow(
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(color: Colors.grey),
-                        ),
-                      ),
-                      children: [
-                        TableCell(child: Center(child: Text(''))),
-                        TableCell(child: Center(child: Text('クライアント'))),
-                        TableCell(child: Center(child: Text('アイテム数'))),
-                        TableCell(child: Center(child: Text('合計金額'))),
-                        TableCell(child: Center(child: Text('下書き作成者'))),
-                        TableCell(child: Center(child: Text('下書き保存日'))),
-                        TableCell(child: Center(child: Text('希望納品日'))),
-                        TableCell(child: Center(child: Text(''))),
-                      ],
-                    ),
-                    // Data rows
-                    for (var order in displayedOrders)
-                      TableRow(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            top: BorderSide(
-                              width: 8,
-                              color: Color.fromARGB(255, 243, 243, 243),
-                            ),
-                            bottom: BorderSide(
-                              width: 5,
-                              color: Color.fromARGB(255, 243, 243, 243),
-                            ),
-                          ),
-                        ),
+            child: Stack(
+              children: [
+                Container(
+                  color: Color.fromARGB(255, 243, 243, 243),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Column(
                         children: [
-                          // Fill in the table cells with the order data
-                          TableCell(
-                            child: SizedBox(
-                              width: 200, // Set your desired width here
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 11.0,
-                                  bottom: 9.0,
-                                ),
-                                child: Center(
-                                  child: OutlinedButton(
-                                    onPressed: () {},
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(
-                                        color: Color.fromARGB(255, 40, 41, 131),
-                                        width:
-                                            1.0, // Adjust the width of the border as needed
+                          SizedBox(height: 24),
+                          Table(
+                            columnWidths: const {
+                              0: FlexColumnWidth(3),
+                              1: FlexColumnWidth(4),
+                              2: FlexColumnWidth(2),
+                              3: FlexColumnWidth(2),
+                              4: FlexColumnWidth(4),
+                              5: FlexColumnWidth(2),
+                              6: FlexColumnWidth(2),
+                              7: FlexColumnWidth(3),
+                            },
+                            children: [
+                              for (var order in displayedOrders)
+                                TableRow(
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    border: Border(
+                                      top: BorderSide(
+                                        width: 8,
+                                        color:
+                                            Color.fromARGB(255, 243, 243, 243),
                                       ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal:
-                                            0.0, // Adjust left and right padding as needed
-                                      ),
-                                      child: Text(
-                                        'FAX依頼',
-                                        style: TextStyle(
-                                          color:
-                                              Color.fromARGB(255, 40, 41, 131),
-                                          fontFamily: 'Hiragino Sans',
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w300,
-                                        ),
+                                      bottom: BorderSide(
+                                        width: 5,
+                                        color:
+                                            Color.fromARGB(255, 243, 243, 243),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(order['customer']['name'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  '${order['products'].length}',
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  calculateTotalAmount(order), // Total amount
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child:
-                                    Text(order['salePerson']['fullname'] ?? ''),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  order['updated'] != null &&
-                                          order['updated'].isNotEmpty
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(order['updated']))
-                                      : '', // Format the shipping date if it exists, otherwise use an empty string
-                                ),
-                              ),
-                            ),
-                          ),
-                          TableCell(
-                            child: Center(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 17.0, bottom: 12),
-                                child: Text(
-                                  order['created'] != null &&
-                                          order['created'].isNotEmpty
-                                      ? DateFormat('yyyy/MM/dd').format(
-                                          DateTime.parse(order['created']))
-                                      : '', // Format the shipping date if it exists, otherwise use an empty string
-                                ),
-                              ),
-                            ),
-                          ),
-
-                          TableCell(
-                            child: SizedBox(
-                              width: 200,
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    top: 11.0, bottom: 9.0),
-                                child: Center(
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(40),
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFF202284),
-                                          Color(0xFFAB7CAE),
-                                        ],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        stops: [0.0, 1.0],
-                                        tileMode: TileMode.clamp,
-                                      ),
-                                    ),
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        showDetailDialog(order);
-                                      },
-                                      style: ButtonStyle(
-                                        backgroundColor:
-                                            MaterialStateProperty.all(
-                                          Colors.transparent,
-                                        ),
-                                        shape: MaterialStateProperty.all(
-                                          RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(40),
+                                  children: [
+                                    TableCell(
+                                      child: SizedBox(
+                                        width: 200,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            top: 11.0,
+                                            bottom: 9.0,
                                           ),
-                                        ),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 20.0,
-                                        ),
-                                        child: Text(
-                                          '詳細',
-                                          style: TextStyle(
-                                            color: Colors.white,
+                                          child: Center(
+                                            child: OutlinedButton(
+                                              onPressed: () {},
+                                              style: OutlinedButton.styleFrom(
+                                                side: BorderSide(
+                                                  color: Color.fromARGB(
+                                                      255, 40, 41, 131),
+                                                  width: 1.0,
+                                                ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(4),
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 0.0,
+                                                ),
+                                                child: Text(
+                                                  'FAX依頼',
+                                                  style: TextStyle(
+                                                    color: Color.fromARGB(
+                                                        255, 40, 41, 131),
+                                                    fontFamily: 'Hiragino Sans',
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w300,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(
+                                              order['customer']['name'] ?? ''),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(
+                                            '${order['products'].length}',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(
+                                            calculateTotalAmount(order),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(order['salePerson']
+                                                  ['fullname'] ??
+                                              ''),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(
+                                            order['updated'] != null &&
+                                                    order['updated'].isNotEmpty
+                                                ? DateFormat('yyyy/MM/dd')
+                                                    .format(DateTime.parse(
+                                                        order['updated']))
+                                                : '',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 17.0, bottom: 12),
+                                          child: Text(
+                                            order['shippingDate'] != null &&
+                                                    order['shippingDate']
+                                                        .isNotEmpty
+                                                ? DateFormat('yyyy/MM/dd')
+                                                    .format(DateTime.parse(
+                                                        order['shippingDate']))
+                                                : '',
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    TableCell(
+                                      child: SizedBox(
+                                        width: 200,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                              top: 11.0, bottom: 9.0),
+                                          child: Center(
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(40),
+                                                gradient: const LinearGradient(
+                                                  colors: [
+                                                    Color(0xFF202284),
+                                                    Color(0xFFAB7CAE),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  stops: [0.0, 1.0],
+                                                  tileMode: TileMode.clamp,
+                                                ),
+                                              ),
+                                              child: ElevatedButton(
+                                                onPressed: () {
+                                                  showDetailDialog(order);
+                                                },
+                                                style: ButtonStyle(
+                                                  backgroundColor:
+                                                      MaterialStateProperty.all(
+                                                    Colors.transparent,
+                                                  ),
+                                                  shape:
+                                                      MaterialStateProperty.all(
+                                                    RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              40),
+                                                    ),
+                                                  ),
+                                                ),
+                                                child: Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                    horizontal: 20.0,
+                                                  ),
+                                                  child: Text(
+                                                    '詳細',
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
+                Positioned(
+                  top: 0,
+                  left: 20,
+                  right: 20,
+                  child: Container(
+                    color: Color.fromARGB(255, 243, 243, 243),
+                    child: Table(
+                      columnWidths: const {
+                        0: FlexColumnWidth(3),
+                        1: FlexColumnWidth(4),
+                        2: FlexColumnWidth(2),
+                        3: FlexColumnWidth(2),
+                        4: FlexColumnWidth(4),
+                        5: FlexColumnWidth(2),
+                        6: FlexColumnWidth(2),
+                        7: FlexColumnWidth(3),
+                      },
+                      children: const [
+                        TableRow(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: Colors.grey),
+                            ),
+                          ),
+                          children: [
+                            TableCell(child: Center(child: Text(''))),
+                            TableCell(child: Center(child: Text('クライアント'))),
+                            TableCell(child: Center(child: Text('アイテム数'))),
+                            TableCell(child: Center(child: Text('合計金額'))),
+                            TableCell(child: Center(child: Text('下書き作成者'))),
+                            TableCell(child: Center(child: Text('下書き保存日'))),
+                            TableCell(child: Center(child: Text('希望納品日'))),
+                            TableCell(child: Center(child: Text(''))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -2293,6 +2371,15 @@ class _DraftPageState extends State<DraftPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              SizedBox(
+                width: 50,
+                child: Text(
+                  '全$totalItems件',
+                ),
+              ),
+              SizedBox(
+                width: 30,
+              ),
               GestureDetector(
                 onTap: () {
                   if (_currentPage > 1) {
@@ -2304,11 +2391,13 @@ class _DraftPageState extends State<DraftPage> {
                     Text('最初へ'),
                     IconButton(
                       icon: Icon(Icons.chevron_left),
-                      onPressed: () {
-                        if (_currentPage > 1) {
-                          navigateToPage(_currentPage - 1);
-                        }
-                      },
+                      onPressed: _currentPage > 1
+                          ? () {
+                              if (_currentPage > 1) {
+                                navigateToPage(_currentPage - 1);
+                              }
+                            }
+                          : null,
                     ),
                   ],
                 ),
@@ -2336,6 +2425,10 @@ class _DraftPageState extends State<DraftPage> {
                       child: Text(
                         '${index + 1}',
                         style: TextStyle(
+                          fontFamily: 'Hira',
+                          fontWeight: index + 1 == _currentPage
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: index + 1 == _currentPage
                               ? Color.fromARGB(255, 44, 22, 243)
                               : Colors.black,
@@ -2356,11 +2449,13 @@ class _DraftPageState extends State<DraftPage> {
                   children: [
                     IconButton(
                       icon: Icon(Icons.chevron_right),
-                      onPressed: () {
-                        if (_currentPage < totalPages) {
-                          navigateToPage(_currentPage + 1);
-                        }
-                      },
+                      onPressed: _currentPage < totalPages
+                          ? () {
+                              if (_currentPage < totalPages) {
+                                navigateToPage(_currentPage + 1);
+                              }
+                            }
+                          : null,
                     ),
                     Text('最後へ'),
                   ],

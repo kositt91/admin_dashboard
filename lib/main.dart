@@ -46,15 +46,26 @@ class _InitialScreenState extends State<InitialScreen> {
 
   Future<void> _checkToken() async {
     String? token = await TokenManager.getAccessToken();
-    bool isValid = await _validateToken(token);
-    if (isValid) {
-      Provider.of<AuthProvider>(context, listen: false).login();
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DashboardPage(),
-        ),
-      );
+    print('Retrieved token: $token');
+    if (token != null) {
+      bool isValid = await TokenManager.verifyAccessToken(token);
+      print('Is token valid: $isValid');
+      if (isValid) {
+        Provider.of<AuthProvider>(context, listen: false).login();
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DashboardPage(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LoginScreen(),
+          ),
+        );
+      }
     } else {
       Navigator.pushReplacement(
         context,
@@ -63,17 +74,6 @@ class _InitialScreenState extends State<InitialScreen> {
         ),
       );
     }
-  }
-
-  Future<bool> _validateToken(String? token) async {
-    // Add your token validation logic here
-    // Return true if the token is valid, false otherwise
-    if (token != null && token.isNotEmpty) {
-      // Example validation: You can use an API call to validate the token
-      // For simplicity, we assume the token is always valid
-      return true;
-    }
-    return false;
   }
 
   @override

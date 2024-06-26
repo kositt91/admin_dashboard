@@ -30,7 +30,8 @@ class _SidebarState extends State<Sidebar> {
   }
 
   void logout(BuildContext context) async {
-    await clearToken(); // Make sure to call the clearToken function
+    await TokenManager
+        .clearToken(); // Call the clearToken function from TokenManager
 
     // Navigate back to the LoginScreen
     Navigator.of(context).pushReplacement(
@@ -80,31 +81,44 @@ class _SidebarState extends State<Sidebar> {
                         child: ListTile(
                           leading: ShaderMask(
                             shaderCallback: (Rect bounds) {
-                              return const LinearGradient(
+                              return LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF202284),
-                                  Color(0xFFAB7CAE),
-                                ],
+                                colors: widget.selectedIndex == 0
+                                    ? [
+                                        Color(0xFF202284),
+                                        Color(0xFFAB7CAE),
+                                      ]
+                                    : [
+                                        Color.fromARGB(255, 255, 255, 255),
+                                        Color.fromARGB(255, 254, 254, 254),
+                                      ],
                               ).createShader(bounds);
                             },
-                            child:
-                                Icon(Icons.list, size: 24, color: Colors.white),
+                            child: Icon(Icons.list_alt,
+                                size: 24, color: Colors.white),
                           ),
                           title: ShaderMask(
                             shaderCallback: (Rect bounds) {
-                              return const LinearGradient(
+                              return LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF202284),
-                                  Color(0xFFAB7CAE),
-                                ],
+                                colors: widget.selectedIndex == 0
+                                    ? [
+                                        Color(0xFF202284),
+                                        Color(
+                                            0xFFAB7CAE), // New color when selected
+                                      ]
+                                    : [
+                                        Color.fromARGB(255, 255, 255, 255),
+                                        Color.fromARGB(255, 254, 254, 254),
+                                      ],
                               ).createShader(bounds);
                             },
-                            child: Text('注文一覧',
-                                style: TextStyle(color: Colors.white)),
+                            child: Text(
+                              '注文一覧',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ),
                       ),
@@ -128,31 +142,45 @@ class _SidebarState extends State<Sidebar> {
                         child: ListTile(
                           leading: ShaderMask(
                             shaderCallback: (Rect bounds) {
-                              return const LinearGradient(
+                              return LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF202284),
-                                  Color(0xFFAB7CAE),
-                                ],
+                                colors: widget.selectedIndex == 1
+                                    ? [
+                                        Color(0xFF202284),
+                                        Color(
+                                            0xFFAB7CAE), // New color when selected
+                                      ]
+                                    : [
+                                        Color.fromARGB(255, 255, 255, 255),
+                                        Color.fromARGB(255, 254, 254, 254),
+                                      ],
                               ).createShader(bounds);
                             },
-                            child: Icon(Icons.drafts,
+                            child: Icon(Icons.file_copy,
                                 size: 24, color: Colors.white),
                           ),
                           title: ShaderMask(
                             shaderCallback: (Rect bounds) {
-                              return const LinearGradient(
+                              return LinearGradient(
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF202284),
-                                  Color(0xFFAB7CAE),
-                                ],
+                                colors: widget.selectedIndex == 1
+                                    ? [
+                                        Color(0xFF202284),
+                                        Color(
+                                            0xFFAB7CAE), // New color when selected
+                                      ]
+                                    : [
+                                        Color.fromARGB(255, 255, 255, 255),
+                                        Color.fromARGB(255, 254, 254, 254),
+                                      ],
                               ).createShader(bounds);
                             },
-                            child: Text('下書き一覧',
-                                style: TextStyle(color: Colors.white)),
+                            child: Text(
+                              '下書き一覧',
+                              style: TextStyle(color: Colors.white),
+                            ),
                           ),
                         ),
                       ),

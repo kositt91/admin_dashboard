@@ -210,29 +210,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        // Forget password
-                        // Padding(
-                        //   padding: const EdgeInsets.only(top: 34),
-                        //   child: InkWell(
-                        //     onTap: () {
-                        //       // Navigate to the Forgot Password screen
-                        //       Navigator.push(
-                        //         context,
-                        //         MaterialPageRoute(
-                        //           builder: (context) => ForgotPasswordScreen(),
-                        //         ),
-                        //       );
-                        //     },
-                        //     child: const Text(
-                        //       'パスワードを忘れた場合',
-                        //       style: TextStyle(
-                        //         fontSize: 14,
-                        //         fontWeight: FontWeight.w300,
-                        //         color: Color.fromARGB(255, 25, 7, 139),
-                        //       ),
-                        //     ),
-                        //   ),
-                        // ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 34),
+                          child: InkWell(
+                            onTap: () {
+                              // Navigate to the Forgot Password screen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'パスワードを忘れた場合',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w300,
+                                color: Color.fromARGB(255, 25, 7, 139),
+                              ),
+                            ),
+                          ),
+                        ),
 
                         SizedBox(
                           width: 200,
